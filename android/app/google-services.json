@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "20771513506",
+    "project_id": "green-watch-fed48",
+    "storage_bucket": "green-watch-fed48.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:20771513506:android:d3b58901ed6c1ca1e0e3fb",
+        "android_client_info": {
+          "package_name": "com.example.green_watch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIfV-IowxUSjqrlEJ6nirSYISVND-1LxI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
