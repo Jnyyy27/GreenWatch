@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'firebase_options.dart';
+import 'screens/report_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +39,8 @@ class _MyHomePageState extends State<MyHomePage> {
   GoogleMapController? _mapController;
   LatLng? _currentLocation;
   int _selectedIndex = 0;
+  bool _mapError = false;
+  String? _mapErrorMessage;
 
   // Default location (fallback if location permission is denied)
   static const CameraPosition _initialPosition = CameraPosition(
@@ -159,9 +162,10 @@ class _MyHomePageState extends State<MyHomePage> {
         // Map - already on this page
         break;
       case 1:
-        // Report - Navigate to report page (you'll need to create this)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report page - Coming soon')),
+        // Report - Navigate to report page
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ReportScreen()),
         );
         break;
       case 2:
@@ -178,31 +182,100 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: _cameraPosition,
-            onMapCreated: (GoogleMapController controller) {
-              _mapController = controller;
-              // If location is already loaded, move camera to it
-              if (_currentLocation != null) {
-                controller.animateCamera(
-                  CameraUpdate.newCameraPosition(
-                    CameraPosition(target: _currentLocation!, zoom: 15.0),
-                  ),
+          // Show error message if map fails to load
+          if (_mapError)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Map Failed to Load',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _mapErrorMessage ?? 'Unknown error',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _mapError = false;
+                        });
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Common fixes:\n'
+                      '1. Check Google Maps API key in android/local.properties\n'
+                      '2. Enable Maps SDK for Android in Google Cloud Console\n'
+                      '3. Enable billing in Google Cloud Console\n'
+                      '4. Check console logs for detailed error',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            GoogleMap(
+              initialCameraPosition: _cameraPosition,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController = controller;
+                print('🗺️ Google Map created successfully');
+                setState(() {
+                  _mapError = false;
+                  _mapErrorMessage = null;
+                });
+                // If location is already loaded, move camera to it
+                if (_currentLocation != null) {
+                  controller.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(target: _currentLocation!, zoom: 15.0),
+                    ),
+                  );
+                }
+              },
+              onCameraMoveStarted: () {
+                print('📷 Camera move started');
+              },
+              onCameraIdle: () {
+                print('📷 Camera idle');
+              },
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              zoomControlsEnabled: true,
+              mapType: MapType.normal,
+              markers: _markers,
+              onTap: (LatLng position) {
+                // Handle map tap events here
+                print(
+                  'Map tapped at: ${position.latitude}, ${position.longitude}',
                 );
-              }
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            zoomControlsEnabled: true,
-            mapType: MapType.normal,
-            markers: _markers,
-            onTap: (LatLng position) {
-              // Handle map tap events here
-              print(
-                'Map tapped at: ${position.latitude}, ${position.longitude}',
-              );
-            },
-          ),
+              },
+              // Note: There's no direct onError callback, but we can detect errors
+              // by checking if map tiles load. Errors usually show in console.
+            ),
           // Floating action button for current location
           Positioned(
             top: 50,
@@ -211,7 +284,8 @@ class _MyHomePageState extends State<MyHomePage> {
               mini: true,
               backgroundColor: Colors.white,
               onPressed: _getCurrentLocation,
-              child: const Icon(Icons.my_location, color: Colors.green),
+              child: const Icon(Icons.my_location, color: const Color.fromARGB(255, 114, 164, 117),
+              ),
             ),
           ),
         ],
@@ -223,9 +297,9 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green,
+        selectedItemColor: const Color.fromARGB(255, 114, 164, 117),
         onTap: _onItemTapped,
       ),
     );
   }
-}
+} 
