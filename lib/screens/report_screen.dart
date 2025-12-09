@@ -11,10 +11,10 @@ class ReportScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 1,
       ),
-      body: const Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+          children: const [
             Icon(Icons.construction, size: 80, color: Colors.grey),
             SizedBox(height: 20),
             Text(
