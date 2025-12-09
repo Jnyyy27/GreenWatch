@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart'; 
+import '../../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -40,7 +40,7 @@ class ProfileScreen extends StatelessWidget {
 
   // --- Widget Builders ---
 
-Widget _buildHeader(User? user) {
+  Widget _buildHeader(User? user) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 60, bottom: 50, left: 20, right: 20),
@@ -52,7 +52,10 @@ Widget _buildHeader(User? user) {
         ),
       ),
       child: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(user?.uid).get(),
+        future: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .get(),
         builder: (context, snapshot) {
           String displayName = "Loading...";
           String displayEmail = user?.email ?? "";
@@ -61,7 +64,7 @@ Widget _buildHeader(User? user) {
             final data = snapshot.data!.data() as Map<String, dynamic>;
             displayName = data['name'] ?? "User";
           } else if (snapshot.hasError) {
-             displayName = "User";
+            displayName = "User";
           }
 
           return Column(
@@ -77,11 +80,11 @@ Widget _buildHeader(User? user) {
                   radius: 40,
                   backgroundColor: Colors.white,
                   // Load the local asset image here:
-                  backgroundImage: AssetImage('greenwatch.png'), 
+                  backgroundImage: AssetImage('greenwatch.png'),
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               // Welcome Text
               Text(
                 "Welcome, $displayName",
@@ -155,11 +158,7 @@ Widget _buildHeader(User? user) {
   }
 
   Widget _buildVerticalDivider() {
-    return Container(
-      height: 30,
-      width: 1,
-      color: Colors.grey[300],
-    );
+    return Container(height: 30, width: 1, color: Colors.grey[300]);
   }
 
   Widget _buildMenuItems(BuildContext context) {
@@ -177,17 +176,19 @@ Widget _buildHeader(User? user) {
             ),
           ),
           const SizedBox(height: 10),
-          
+
           _buildMenuTile(
             icon: Icons.history_edu,
             title: "My Reports",
             subtitle: "Check status of submitted issues",
             onTap: () {
-               ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(content: Text("My Reports feature coming soon!"))
-               );
-               // Once you create MyReportsScreen, uncomment below:
-               // Navigator.push(context, MaterialPageRoute(builder: (context) => const MyReportsScreen()));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("My Reports feature coming soon!"),
+                ),
+              );
+              // Once you create MyReportsScreen, uncomment below:
+              // Navigator.push(context, MaterialPageRoute(builder: (context) => const MyReportsScreen()));
             },
           ),
 
@@ -197,8 +198,8 @@ Widget _buildHeader(User? user) {
             subtitle: "Updates on your reports",
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(content: Text("No new notifications"))
-               );
+                const SnackBar(content: Text("No new notifications")),
+              );
             },
           ),
 
@@ -218,9 +219,9 @@ Widget _buildHeader(User? user) {
             title: "Community Page",
             subtitle: "See what's happening nearby",
             onTap: () {
-               ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(content: Text("Community Page coming soon!"))
-               );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Community Page coming soon!")),
+              );
             },
           ),
 
@@ -232,9 +233,9 @@ Widget _buildHeader(User? user) {
               _showGuidelines(context);
             },
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // LOGOUT BUTTON
           _buildMenuTile(
             icon: Icons.logout,
@@ -278,13 +279,12 @@ Widget _buildHeader(User? user) {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: isDestructive ? Colors.red[50] : _primaryGreen.withOpacity(0.1),
+            color: isDestructive
+                ? Colors.red[50]
+                : _primaryGreen.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: isDestructive ? Colors.red : _primaryGreen,
-          ),
+          child: Icon(icon, color: isDestructive ? Colors.red : _primaryGreen),
         ),
         title: Text(
           title,
@@ -322,26 +322,32 @@ Widget _buildHeader(User? user) {
               Text(
                 "User Guidelines",
                 style: TextStyle(
-                  fontSize: 20, 
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: _primaryGreen
+                  color: _primaryGreen,
                 ),
               ),
               const SizedBox(height: 16),
               const ListTile(
                 leading: Icon(Icons.camera_alt),
                 title: Text("Take Clear Photos"),
-                subtitle: Text("Ensure the issue is clearly visible for AI verification."),
+                subtitle: Text(
+                  "Ensure the issue is clearly visible for AI verification.",
+                ),
               ),
               const ListTile(
                 leading: Icon(Icons.location_on),
                 title: Text("Check Location"),
-                subtitle: Text("GPS tagging helps authorities find the issue fast."),
+                subtitle: Text(
+                  "GPS tagging helps authorities find the issue fast.",
+                ),
               ),
               const ListTile(
                 leading: Icon(Icons.category),
                 title: Text("Select Category"),
-                subtitle: Text("Choose the correct issue type (e.g., Pothole, Trash)."),
+                subtitle: Text(
+                  "Choose the correct issue type (e.g., Pothole, Trash).",
+                ),
               ),
               const SizedBox(height: 20),
             ],

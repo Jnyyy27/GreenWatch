@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../../services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -41,9 +41,9 @@ class _AuthScreenState extends State<AuthScreen> {
       // No need to navigate manually; main.dart stream will handle it
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${e.toString()}")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -63,11 +63,18 @@ class _AuthScreenState extends State<AuthScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Logo or Title
-                const Icon(Icons.eco, size: 80, color: Color.fromARGB(255, 114, 164, 117)),
+                const Icon(
+                  Icons.eco,
+                  size: 80,
+                  color: Color.fromARGB(255, 114, 164, 117),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   _isLogin ? 'Welcome Back' : 'Create Account',
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 32),
 
