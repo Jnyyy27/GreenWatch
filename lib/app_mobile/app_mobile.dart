@@ -161,25 +161,6 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _selectedIndex = index;
     });
-
-    // Handle navigation based on selected index
-    switch (index) {
-      case 0:
-        // Map - already on this page
-        break;
-      case 1:
-        // Report - Navigate to report page (you'll need to create this)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report page - Coming soon')),
-        );
-        break;
-      case 2:
-        // Profile - Navigate to profile page (you'll need to create this)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profile page')));
-        break;
-    }
   }
 
   @override

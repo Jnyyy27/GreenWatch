@@ -59,3 +59,26 @@ android {
 flutter {
     source = "../.."
 }
+
+// Generate Dart config file with API key from local.properties
+tasks.register("generateDartConfig") {
+    doLast {
+        val dartConfigPath = project.rootProject.file("lib/config/api_keys.dart")
+        dartConfigPath.parentFile.mkdirs()
+
+        val apiKey = mapsApiKey ?: ""
+        val dartContent = """// Generated at build time - do not edit
+class ApiKeys {
+  static const String mapsApiKey = '$apiKey';
+}
+""".trimIndent()
+
+        dartConfigPath.writeText(dartContent)
+        println("✅ Generated lib/config/api_keys.dart with MAPS_API_KEY")
+    }
+}
+
+// Run the generator before Gradle's build task
+tasks.named("preBuild").configure {
+    dependsOn("generateDartConfig")
+}

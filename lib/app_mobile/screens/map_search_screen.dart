@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
+import 'package:green_watch/config/api_keys.dart';
 
 class MapSearchScreen extends StatefulWidget {
   const MapSearchScreen({super.key});
@@ -22,11 +23,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   String? _pickedAddress;
   bool _isSearching = false;
   bool _isGettingLocation = false;
-
-  // Google Maps API Key - you'll need to get this from local.properties or environment
-  // For now, using a placeholder - you should load this from your config
-  static const String _googleMapsApiKey =
-      'AIzaSyAJTrzgxdxSqyCu9GLIr5EVJIqb4ZuhIu4';
+  late String _googleMapsApiKey;
 
   static const CameraPosition _initialCamera = CameraPosition(
     target: LatLng(3.1390, 101.6869), // fallback to Kuala Lumpur roughly
@@ -36,6 +33,8 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   @override
   void initState() {
     super.initState();
+    // Load API key from generated config (loaded from local.properties at build time)
+    _googleMapsApiKey = ApiKeys.mapsApiKey;
     _jumpToCurrentLocation();
   }
 
@@ -265,8 +264,15 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Location'),
-        backgroundColor: const Color.fromARGB(255, 96, 156, 101),
+        title: const Text('Search Location',
+        style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+        backgroundColor: const Color.fromRGBO(96, 156, 101, 1),
+        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
