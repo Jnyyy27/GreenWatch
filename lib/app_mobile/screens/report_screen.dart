@@ -32,9 +32,9 @@ class _ReportScreenState extends State<ReportScreen> {
     'Road potholes',
     'Road signs',
     'Faded road markings',
-    'Traffic light',
+    'Traffic lights',
     'Streetlights',
-    'Public equipment',
+    'Public facilities',
   ];
 
   @override

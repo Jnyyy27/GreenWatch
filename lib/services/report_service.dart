@@ -57,10 +57,10 @@ class ReportService {
   // Map categories to departments
   static String getDepartmentForCategory(String category) {
     switch (category) {
-      case 'Public equipment':
+      case 'Public facilities':
       case 'Road signs':
       case 'Faded road markings':
-      case 'Traffic light':
+      case 'Traffic lights':
         return 'MBPP';
       case 'Streetlights':
         return 'TNB';
