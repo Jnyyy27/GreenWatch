@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import 'pages/admin_dashboard_page.dart';
+import 'pages/login_page.dart';
+
+void main() {
+  runApp(const MyWebApp());
+}
 
 class MyWebApp extends StatelessWidget {
   const MyWebApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Admin Dashboard',
-      home: const AdminDashboardPage(),
+      theme: ThemeData(primarySwatch: Colors.green),
+      home: const LoginPage(),
     );
   }
 }
