@@ -1,1 +1,5 @@
 flutter/ephemeral
+
+# Ignore Flutter generated plugin registrant files
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugins.cmake

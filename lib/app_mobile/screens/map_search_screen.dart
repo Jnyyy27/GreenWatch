@@ -264,8 +264,9 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Location',
-        style: TextStyle(
+        title: const Text(
+          'Search Location',
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,

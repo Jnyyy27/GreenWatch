@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'screens/auth_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/issues_screen.dart';
 
 class MobileApp extends StatelessWidget {
   const MobileApp({super.key});
@@ -212,12 +213,17 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
 
       // --------------------
-      // Tab 1: Report Screen
+      // Tab 1: Issues Screen
+      // --------------------
+      const IssuesScreen(),
+
+      // --------------------
+      // Tab 2: Report Screen
       // --------------------
       const ReportScreen(),
 
       // ---------------------
-      // Tab 2: Profile Screen
+      // Tab 3: Profile Screen
       // ---------------------
       const ProfileScreen(),
     ];
@@ -229,11 +235,14 @@ class _MyHomePageState extends State<MyHomePage> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Issues'),
           BottomNavigationBarItem(icon: Icon(Icons.report), label: 'Report'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: const Color.fromARGB(255, 114, 164, 117),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         onTap: _onItemTapped,
       ),
     );

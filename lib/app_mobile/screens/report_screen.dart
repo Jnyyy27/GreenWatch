@@ -28,13 +28,13 @@ class _ReportScreenState extends State<ReportScreen> {
   bool _isLoadingLocation = false;
 
   final List<String> _categories = [
-    'Public equipment problem',
-    'Damage/missing road signs',
-    'Faded road markings',
-    'Traffic light problem',
-    'Streetlights problem',
     'Damage roads',
     'Road potholes',
+    'Road signs',
+    'Faded road markings',
+    'Traffic light',
+    'Streetlights',
+    'Public equipment',
   ];
 
   @override
@@ -495,11 +495,6 @@ class _ReportScreenState extends State<ReportScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: 'Back',
-        ),
       ),
       body: _isSubmitting
           ? Center(
