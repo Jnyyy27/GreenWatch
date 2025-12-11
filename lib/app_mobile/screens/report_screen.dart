@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import '../../services/report_service.dart';
 import 'map_search_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -397,6 +399,12 @@ class _ReportScreenState extends State<ReportScreen> {
       return;
     }
 
+    final user = FirebaseAuth.instance.currentUser; 
+    if (user == null) {
+      _showSnackBar('You must be logged in to submit.', Colors.red, Icons.lock);
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
@@ -409,6 +417,7 @@ class _ReportScreenState extends State<ReportScreen> {
         latitude: _latitude!,
         longitude: _longitude!,
         imageFile: _selectedImage,
+        userId: user.uid,
       );
 
       if (mounted) {
