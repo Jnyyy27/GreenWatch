@@ -19,7 +19,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
 
   final List<String> _statusOptions = [
     'Submitted',
-    'On Hold',
+    'Viewed',
     'In Progress',
     'Resolved',
   ];
@@ -57,7 +57,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
   String _normalizeStatus(String status) {
     final statusMap = {
       'pending verification': 'Submitted',
-      'on hold': 'On Hold',
+      'viewed': 'Viewed',
       'in progress': 'In Progress',
       'resolved': 'Resolved',
     };

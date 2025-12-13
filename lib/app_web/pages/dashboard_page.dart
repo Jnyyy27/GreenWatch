@@ -105,11 +105,15 @@ class DashboardPage extends StatelessWidget {
                     .length;
 
                 final pendingVerification = reports
-                    .where((r) => r.status == 'pending verification')
+                    .where((r) => r.status == 'viewed')
                     .length;
 
                 final inProgress = reports
-                    .where((r) => r.status == 'in progress')
+                    .where(
+                      (r) =>
+                          r.status == 'in progress' ||
+                          r.status == 'In Progress',
+                    )
                     .length;
 
                 final resolved = reports
