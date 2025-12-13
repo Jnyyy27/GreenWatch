@@ -140,6 +140,7 @@ class ReportService {
     required String exactLocation,
     required double latitude,
     required double longitude,
+    required String userId,
     File? imageFile,
   }) async {
     try {
@@ -151,7 +152,7 @@ class ReportService {
 
       // Create report document
       final DocumentReference reportRef = _firestore
-          .collection('reports')
+          .collection('my_reports')
           .doc();
       final String reportId = reportRef.id;
       print('🆔 Report ID generated: $reportId');

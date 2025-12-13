@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import '../../services/report_service.dart';
 import 'map_search_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -397,6 +399,12 @@ class _ReportScreenState extends State<ReportScreen> {
       return;
     }
 
+    final user = FirebaseAuth.instance.currentUser; 
+    if (user == null) {
+      _showSnackBar('You must be logged in to submit.', Colors.red, Icons.lock);
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
@@ -409,6 +417,7 @@ class _ReportScreenState extends State<ReportScreen> {
         latitude: _latitude!,
         longitude: _longitude!,
         imageFile: _selectedImage,
+        userId: user.uid,
       );
 
       if (mounted) {
@@ -433,7 +442,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text('Report ID: $reportId'),
-                const Text('Status: Pending Verification'),
+                const Text('status: Pending Verification'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -543,7 +552,6 @@ class _ReportScreenState extends State<ReportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 12),
 
                     // Category Dropdown
                     _buildSectionLabel('Issue Category', required: true),
@@ -692,29 +700,71 @@ class _ReportScreenState extends State<ReportScreen> {
                     // Description
                     _buildSectionLabel('Description', required: true),
                     const SizedBox(height: 10),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                    Stack(
+                      children: [
+                        // TextField container
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _descriptionController,
-                        decoration: InputDecoration(
-                          hintText: 'Describe the issue in detail...',
-                          hintStyle: TextStyle(color: Colors.grey.shade400),
-                          prefixIcon: Container(
-                            margin: const EdgeInsets.only(
-                              left: 12,
-                              right: 12,
-                              top: 12,
+                          child: TextFormField(
+                            controller: _descriptionController,
+                            decoration: InputDecoration(
+                              hintText: 'Describe the issue in detail...',
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                              // Adjust left padding to make room for the icon
+                              contentPadding: const EdgeInsets.fromLTRB(
+                                60,
+                                16,
+                                16,
+                                16,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                  color: Colors.green.shade400,
+                                  width: 2,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(
+                                  color: Colors.red,
+                                  width: 1.5,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
                             ),
+                            maxLines: 5,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter a description';
+                              }
+                              if (value.trim().length < 10) {
+                                return 'Description must be at least 10 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        // Top-left icon
+                        Positioned(
+                          left: 12,
+                          top: 16,
+                          child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: Colors.green.shade50,
@@ -726,39 +776,8 @@ class _ReportScreenState extends State<ReportScreen> {
                               size: 20,
                             ),
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: Colors.green.shade400,
-                              width: 2,
-                            ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: const BorderSide(
-                              color: Colors.red,
-                              width: 1.5,
-                            ),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.all(16),
                         ),
-                        maxLines: 5,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a description';
-                          }
-                          if (value.trim().length < 10) {
-                            return 'Description must be at least 10 characters';
-                          }
-                          return null;
-                        },
-                      ),
+                      ],
                     ),
                     const SizedBox(height: 24),
 
@@ -1257,45 +1276,6 @@ class _ReportScreenState extends State<ReportScreen> {
                             letterSpacing: 0.5,
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Info Text
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.amber.shade50, Colors.amber.shade100],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.hourglass_empty,
-                              color: Colors.amber.shade700,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Your report will be verified before appearing on the map',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.amber.shade900,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                     const SizedBox(height: 20),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
+import 'my_reports_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -187,8 +188,7 @@ class ProfileScreen extends StatelessWidget {
                   content: Text("My Reports feature coming soon!"),
                 ),
               );
-              // Once you create MyReportsScreen, uncomment below:
-              // Navigator.push(context, MaterialPageRoute(builder: (context) => const MyReportsScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const MyReportsScreen()));
             },
           ),
 

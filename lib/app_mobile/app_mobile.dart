@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'screens/auth_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/issues_screen.dart';
+import 'screens/issue_detail_screen.dart';
 
 class MobileApp extends StatelessWidget {
   const MobileApp({super.key});
@@ -48,6 +54,11 @@ class _MyHomePageState extends State<MyHomePage> {
   GoogleMapController? _mapController;
   LatLng? _currentLocation;
   int _selectedIndex = 0;
+  Map<String, BitmapDescriptor> _markerIcons = {};
+  Set<Marker> _issueMarkers = {};
+  Set<String> _loadedDocumentIds =
+      {}; // Track loaded documents to avoid unnecessary updates
+  StreamSubscription<QuerySnapshot>? _reportsSubscription;
 
   // Default location (fallback if location permission is denied)
   static const CameraPosition _initialPosition = CameraPosition(
@@ -55,14 +66,97 @@ class _MyHomePageState extends State<MyHomePage> {
     zoom: 12.0,
   );
 
+  // Map category names to asset file names
+  String _getMarkerAssetPath(String category) {
+    switch (category) {
+      case 'Damage roads':
+        return 'assets/markers/Damage roads.png';
+      case 'Road potholes':
+        return 'assets/markers/Road potholes.png';
+      case 'Road signs':
+        return 'assets/markers/Road signs.png';
+      case 'Faded road markings':
+        return 'assets/markers/Faded road markings.png';
+      case 'Traffic lights':
+        return 'assets/markers/Traffic lights.png';
+      case 'Streetlights':
+        return 'assets/markers/Streetlights.png';
+      case 'Public facilities':
+        return 'assets/markers/Public facilities.png';
+      default:
+        return 'assets/markers/Public facilities.png'; // Default fallback
+    }
+  }
+
+  // Load custom marker icon from asset
+  Future<BitmapDescriptor> _loadMarkerIcon(String assetPath) async {
+    if (_markerIcons.containsKey(assetPath)) {
+      return _markerIcons[assetPath]!;
+    }
+
+    try {
+      final ByteData data = await rootBundle.load(assetPath);
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: 100, // Resize to 100px width
+      );
+      final ui.FrameInfo frameInfo = await codec.getNextFrame();
+      final ByteData? byteData = await frameInfo.image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      final Uint8List uint8List = byteData!.buffer.asUint8List();
+
+      final BitmapDescriptor icon = BitmapDescriptor.fromBytes(uint8List);
+      _markerIcons[assetPath] = icon;
+      return icon;
+    } catch (e) {
+      print('Error loading marker icon: $e');
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _preloadMarkerIcons();
+    _setupReportsListener();
+  }
+
+  // Set up Firestore listener without rebuilding widgets
+  void _setupReportsListener() {
+    _reportsSubscription = FirebaseFirestore.instance
+        .collection('reports')
+        .where('status', isEqualTo: 'submitted ')
+        .snapshots()
+        .listen((snapshot) {
+          if (mounted) {
+            _updateMarkersFromSnapshot(snapshot);
+          }
+        });
+  }
+
+  // Pre-load all marker icons at startup to avoid loading during updates
+  Future<void> _preloadMarkerIcons() async {
+    final categories = [
+      'Damage roads',
+      'Road potholes',
+      'Road signs',
+      'Faded road markings',
+      'Traffic lights',
+      'Streetlights',
+      'Public facilities',
+    ];
+
+    for (final category in categories) {
+      final assetPath = _getMarkerAssetPath(category);
+      await _loadMarkerIcon(assetPath);
+    }
   }
 
   @override
   void dispose() {
+    _reportsSubscription?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
@@ -141,9 +235,72 @@ class _MyHomePageState extends State<MyHomePage> {
     return _initialPosition;
   }
 
+  // Update markers from Firestore snapshot (only if documents changed)
+  Future<void> _updateMarkersFromSnapshot(QuerySnapshot snapshot) async {
+    try {
+      // Check if documents have actually changed
+      final currentDocIds = snapshot.docs.map((doc) => doc.id).toSet();
+      if (currentDocIds.length == _loadedDocumentIds.length &&
+          currentDocIds.every((id) => _loadedDocumentIds.contains(id))) {
+        // No changes, skip update
+        return;
+      }
+
+      final Set<Marker> markers = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final latitude = data['latitude'] as double?;
+        final longitude = data['longitude'] as double?;
+        final category = data['category'] as String? ?? '';
+        final description = data['description'] as String? ?? '';
+        final location = data['exactLocation'] as String? ?? '';
+
+        if (latitude != null && longitude != null) {
+          final assetPath = _getMarkerAssetPath(category);
+          // Icons are pre-loaded, so this should be instant
+          final icon = await _loadMarkerIcon(assetPath);
+
+          markers.add(
+            Marker(
+              markerId: MarkerId(doc.id),
+              position: LatLng(latitude, longitude),
+              icon: icon,
+              infoWindow: InfoWindow(
+                title: category,
+                snippet: description.isNotEmpty ? description : location,
+              ),
+              onTap: () {
+                // Navigate to issue detail screen when marker is tapped
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        IssueDetailScreen(issueData: data, docId: doc.id),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _issueMarkers = markers;
+          _loadedDocumentIds = currentDocIds;
+        });
+      }
+    } catch (e) {
+      print('Error updating issue markers: $e');
+    }
+  }
+
   Set<Marker> get _markers {
+    final Set<Marker> allMarkers = Set.from(_issueMarkers);
+
     if (_currentLocation != null) {
-      return {
+      allMarkers.add(
         Marker(
           markerId: const MarkerId('current_location'),
           position: _currentLocation!,
@@ -153,9 +310,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
-      };
+      );
     }
-    return {};
+    return allMarkers;
   }
 
   void _onItemTapped(int index) {
@@ -173,7 +330,11 @@ class _MyHomePageState extends State<MyHomePage> {
       // -----------------
       Stack(
         children: [
+          // GoogleMap widget - only rebuilds when _markers state changes
           GoogleMap(
+            key: const ValueKey(
+              'map',
+            ), // Stable key prevents unnecessary rebuilds
             initialCameraPosition: _cameraPosition,
             onMapCreated: (GoogleMapController controller) {
               _mapController = controller;
@@ -197,17 +358,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 'Map tapped at: ${position.latitude}, ${position.longitude}',
               );
             },
-          ),
-          // Floating action button for current location
-          Positioned(
-            top: 50,
-            right: 16,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.white,
-              onPressed: _getCurrentLocation,
-              child: const Icon(Icons.my_location, color: Colors.green),
-            ),
           ),
         ],
       ),

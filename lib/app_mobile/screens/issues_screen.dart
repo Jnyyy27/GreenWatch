@@ -419,7 +419,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('reports')
-                  .where('status', isEqualTo: 'successfully verified')
+                  .where('status', isEqualTo: 'submitted ')
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
