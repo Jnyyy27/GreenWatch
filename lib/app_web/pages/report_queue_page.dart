@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'report_detail_page.dart';
 import '../services/report_model.dart';
+import 'dart:convert';
+import 'package:photo_view/photo_view.dart';
 
 class ReportQueuePage extends StatefulWidget {
   final String department;
@@ -88,13 +90,14 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   }
 
   String _normalizeStatus(String status) {
+    final normalizedStatus = status.toLowerCase().trim();
     final statusMap = {
-      'pending verification': 'Submitted',
+      'submitted': 'Submitted',
       'viewed': 'Viewed',
       'in progress': 'In Progress',
       'resolved': 'Resolved',
     };
-    return statusMap[status.toLowerCase()] ?? status;
+    return statusMap[normalizedStatus] ?? status;
   }
 
   void _showFilterDialog() {
@@ -166,6 +169,8 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+
       appBar: AppBar(
         title: const Text(
           'Report Queue',
@@ -202,50 +207,36 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                 Row(
                   children: [
                     // Search Input
+                    //
                     Expanded(
-                      flex: 3,
-                      child: Container(
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Search reports...',
-                            hintStyle: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade400,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              size: 20,
-                              color: Colors.grey.shade400,
-                            ),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: Icon(
-                                      Icons.close,
-                                      size: 18,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
+                      child: TextField(
+                        controller: _searchController,
+                        textAlignVertical:
+                            TextAlignVertical.center, // centers text vertically
+                        decoration: InputDecoration(
+                          hintText: 'Search reports...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
                           ),
-                          onChanged: (value) =>
-                              setState(() => _searchQuery = value),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -260,7 +251,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: _selectedStatus,
+                          value: _selectedStatus ?? 'All',
                           icon: Icon(
                             Icons.keyboard_arrow_down,
                             size: 18,
@@ -293,7 +284,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                               )
                               .toList(),
                           onChanged: (value) {
-                            setState(() => _selectedStatus = value);
+                            setState(() => _selectedStatus = value ?? 'All');
                           },
                         ),
                       ),
@@ -447,8 +438,20 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                     stream: FirebaseFirestore.instance
                         .collection('reports')
                         .where('department', isEqualTo: widget.department)
+                        .orderBy('createdAt', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: TextStyle(
+                              color: Colors.red.shade400,
+                              fontSize: 16,
+                            ),
+                          ),
+                        );
+                      }
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
@@ -478,6 +481,11 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
 
                       final allReports = snapshot.data!.docs
                           .map((doc) => Report.fromFirestore(doc))
+                          .where(
+                            (report) =>
+                                report.status.toLowerCase().trim() !=
+                                'pending verification',
+                          )
                           .toList();
 
                       final filteredReports = _filterReports(allReports);
@@ -526,7 +534,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                 ),
                 // Divider
                 Container(width: 1, color: Colors.grey.shade300),
-                // Right Panel: Report Details
                 // Right Panel: Report Details (listens to selectedReportNotifier)
                 Expanded(
                   flex: 1,
@@ -634,156 +641,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
     );
   }
 
-  // Widget _buildReportDetailsPanel(Report report) {
-  //   return SingleChildScrollView(
-  //     padding: const EdgeInsets.all(16),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         // Image
-  //         if (report.imageUrl.isNotEmpty)
-  //           Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Text(
-  //                 'Submitted Image',
-  //                 style: TextStyle(
-  //                   fontSize: 13,
-  //                   fontWeight: FontWeight.w600,
-  //                   color: Colors.grey.shade800,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 8),
-  //               Container(
-  //                 width: double.infinity,
-  //                 height: 200,
-  //                 decoration: BoxDecoration(
-  //                   color: Colors.grey.shade200,
-  //                   borderRadius: BorderRadius.circular(8),
-  //                   border: Border.all(color: Colors.grey.shade300),
-  //                 ),
-  //                 child: Icon(
-  //                   Icons.image,
-  //                   size: 48,
-  //                   color: Colors.grey.shade400,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 16),
-  //             ],
-  //           ),
-  //         // Category and Status
-  //         Row(
-  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Expanded(
-  //               child: Column(
-  //                 crossAxisAlignment: CrossAxisAlignment.start,
-  //                 children: [
-  //                   Text(
-  //                     report.category,
-  //                     style: const TextStyle(
-  //                       fontSize: 18,
-  //                       fontWeight: FontWeight.bold,
-  //                     ),
-  //                   ),
-  //                   const SizedBox(height: 8),
-  //                   _buildStatusBadge(_normalizeStatus(report.status)),
-  //                 ],
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         const SizedBox(height: 16),
-  //         // Location
-  //         _buildDetailRow('Location', report.exactLocation),
-  //         const SizedBox(height: 12),
-  //         // Reported Date
-  //         _buildDetailRow('Reported', _formatDate(report.createdAt)),
-  //         const SizedBox(height: 12),
-  //         // Updated Date
-  //         _buildDetailRow('Last Updated', _formatDate(report.updatedAt)),
-  //         const SizedBox(height: 16),
-  //         // Map Placeholder
-  //         Container(
-  //           width: double.infinity,
-  //           height: 200,
-  //           decoration: BoxDecoration(
-  //             color: Colors.grey.shade200,
-  //             borderRadius: BorderRadius.circular(8),
-  //             border: Border.all(color: Colors.grey.shade300),
-  //           ),
-  //           child: Center(
-  //             child: Column(
-  //               mainAxisAlignment: MainAxisAlignment.center,
-  //               children: [
-  //                 Icon(Icons.map, size: 48, color: Colors.grey.shade400),
-  //                 const SizedBox(height: 8),
-  //                 Text(
-  //                   'Map View\nLat: ${report.latitude.toStringAsFixed(4)}, Lng: ${report.longitude.toStringAsFixed(4)}',
-  //                   textAlign: TextAlign.center,
-  //                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ),
-  //         const SizedBox(height: 16),
-  //         // Description
-  //         Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text(
-  //               'Description',
-  //               style: TextStyle(
-  //                 fontSize: 13,
-  //                 fontWeight: FontWeight.w600,
-  //                 color: Colors.grey.shade800,
-  //               ),
-  //             ),
-  //             const SizedBox(height: 8),
-  //             Container(
-  //               width: double.infinity,
-  //               padding: const EdgeInsets.all(12),
-  //               decoration: BoxDecoration(
-  //                 color: Colors.grey.shade50,
-  //                 borderRadius: BorderRadius.circular(8),
-  //                 border: Border.all(color: Colors.grey.shade300),
-  //               ),
-  //               child: Text(
-  //                 report.description,
-  //                 style: const TextStyle(fontSize: 13, height: 1.5),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         const SizedBox(height: 24),
-  //         // Manage Button
-  //         SizedBox(
-  //           width: double.infinity,
-  //           child: ElevatedButton(
-  //             onPressed: () {
-  //               _showReportDetailModal(report);
-  //             },
-  //             style: ElevatedButton.styleFrom(
-  //               backgroundColor: Colors.green.shade700,
-  //               foregroundColor: Colors.white,
-  //               padding: const EdgeInsets.symmetric(vertical: 14),
-  //               shape: RoundedRectangleBorder(
-  //                 borderRadius: BorderRadius.circular(8),
-  //               ),
-  //             ),
-  //             child: const Text(
-  //               'Manage Report',
-  //               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   Widget _buildReportDetailsPanel(Report report) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -813,14 +670,14 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
           const SizedBox(height: 24),
 
           // Submitted Image
-          if (report.imageUrl.isNotEmpty)
+          if (report.imageBase64Thumbnail.isNotEmpty)
             Column(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     width: double.infinity,
-                    height: 240,
+                    height: 350,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       boxShadow: [
@@ -831,47 +688,57 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                         ),
                       ],
                     ),
-                    child: Image.network(
-                      report.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            size: 48,
-                            color: Colors.grey.shade400,
+                    child: Stack(
+                      children: [
+                        // The image
+                        Positioned.fill(
+                          child: Image.memory(
+                            base64Decode(report.imageBase64Thumbnail),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 48,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                : null,
-                            strokeWidth: 2,
+                        ),
+
+                        // Zoom icon at bottom-right
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () {
+                              _showFullImage(
+                                context,
+                                report.imageBase64Thumbnail,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
               ],
             ),
-          if (report.imageUrl.isEmpty) const SizedBox(height: 5),
-          Text(
-            'Submitted Image',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade800,
-              letterSpacing: -0.2,
-            ),
-          ),
-          const SizedBox(height: 16),
 
           // Info Cards
           Container(
@@ -972,6 +839,43 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showFullImage(BuildContext context, String base64Image) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        insetPadding: EdgeInsets.all(0),
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            PhotoView(
+              imageProvider: MemoryImage(base64Decode(base64Image)),
+              backgroundDecoration: const BoxDecoration(color: Colors.black),
+              minScale: PhotoViewComputedScale.contained,
+              maxScale: PhotoViewComputedScale.covered * 3,
+            ),
+
+            // Close button at top-right
+            Positioned(
+              top: 32,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 28),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

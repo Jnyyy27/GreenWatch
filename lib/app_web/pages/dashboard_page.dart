@@ -1,52 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-class Report {
-  final String reportId;
-  final String category;
-  final DateTime createdAt;
-  final String department;
-  final String description;
-  final String exactLocation;
-  final String imageUrl;
-  final double latitude;
-  final double longitude;
-  final String status;
-  final DateTime updatedAt;
-
-  Report({
-    required this.reportId,
-    required this.category,
-    required this.createdAt,
-    required this.department,
-    required this.description,
-    required this.exactLocation,
-    required this.imageUrl,
-    required this.latitude,
-    required this.longitude,
-    required this.status,
-    required this.updatedAt,
-  });
-
-  factory Report.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Report(
-      reportId: data['reportId'] ?? '',
-      category: data['category'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      department: data['department'] ?? '',
-      description: data['description'] ?? '',
-      exactLocation: data['exactLocation'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
-      latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
-      status: data['status'] ?? 'pending verification',
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-    );
-  }
-
-  bool get isVerified => status != 'pending verification';
-}
+import '../services/report_model.dart';
+import 'report_detail_page.dart';
 
 class DashboardPage extends StatelessWidget {
   final String department;
@@ -57,194 +12,259 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('$department - Dashboard'),
-        elevation: 0,
-        backgroundColor: Colors.green.shade700,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome to $department',
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Overview of recent activities and key metrics',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 32),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('reports')
-                  .where('department', isEqualTo: department)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No reports available'));
-                }
-
-                final reports = snapshot.data!.docs
-                    .map((doc) => Report.fromFirestore(doc))
-                    .toList();
-
-                final today = DateTime.now();
-                final newReportsToday = reports
-                    .where(
-                      (r) =>
-                          r.createdAt.year == today.year &&
-                          r.createdAt.month == today.month &&
-                          r.createdAt.day == today.day,
-                    )
-                    .length;
-
-                final pendingVerification = reports
-                    .where((r) => r.status == 'viewed')
-                    .length;
-
-                final inProgress = reports
-                    .where(
-                      (r) =>
-                          r.status == 'in progress' ||
-                          r.status == 'In Progress',
-                    )
-                    .length;
-
-                final resolved = reports
-                    .where((r) => r.status == 'resolved')
-                    .length;
-
-                final unverifiedReports =
-                    reports
-                        .where((r) => r.status == 'pending verification')
-                        .toList()
-                      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // KPI Cards
-                    GridView.count(
-                      crossAxisCount: 4,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      children: [
-                        _buildKPICard(
-                          'New Reports (24h)',
-                          newReportsToday.toString(),
-                          Colors.blue,
-                          Icons.new_releases,
-                        ),
-                        _buildKPICard(
-                          'Pending Verification',
-                          pendingVerification.toString(),
-                          Colors.orange,
-                          Icons.pending_actions,
-                        ),
-                        _buildKPICard(
-                          'In Progress',
-                          inProgress.toString(),
-                          Colors.amber,
-                          Icons.hourglass_bottom,
-                        ),
-                        _buildKPICard(
-                          'Resolved',
-                          resolved.toString(),
-                          Colors.green,
-                          Icons.check_circle,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    // Quick Action Section
-                    Text(
-                      'Quick Actions - Pending Verification',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (unverifiedReports.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            'All reports verified!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: unverifiedReports.length > 5
-                            ? 5
-                            : unverifiedReports.length,
-                        itemBuilder: (context, index) {
-                          final report = unverifiedReports[index];
-                          return _buildQuickActionCard(report);
-                        },
-                      ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKPICard(String title, String value, Color color, IconData icon) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(
+            color: Color(0xFF1a1a1a),
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.3,
           ),
         ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: color,
+        elevation: 0,
+        backgroundColor: const Color.fromARGB(255, 159, 232, 177),
+        surfaceTintColor: Colors.white,
+        iconTheme: IconThemeData(color: Colors.grey.shade700),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: Colors.grey.shade200, height: 1),
+        ),
+      ),
+      backgroundColor: Colors.grey.shade50,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('reports')
+            .where('department', isEqualTo: department)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.green.shade600),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading dashboard...',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ],
               ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.assessment_outlined,
+                    size: 80,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No reports available',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Reports will appear here once submitted',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final reports = snapshot.data!.docs
+              .map((doc) => Report.fromFirestore(doc))
+              .toList();
+
+          final now = DateTime.now();
+
+          final newReports24h = reports
+              .where((r) => now.difference(r.createdAt).inHours <= 24)
+              .toList();
+
+          final unviewedReports = reports
+              .where((r) => r.status.toLowerCase() == 'submitted')
+              .toList();
+
+          final totalReports = reports.length;
+
+          final inProgressReports = reports
+              .where((r) => r.status.toLowerCase() == 'in progress')
+              .toList();
+
+          final resolvedReports = reports
+              .where((r) => r.status.toLowerCase() == 'resolved')
+              .toList();
+
+          // Top 5 new reports
+          final top5NewReports = newReports24h
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          final top5New = top5NewReports.take(5).toList();
+
+          // Top 5 unresolved >1 week
+          final top5OldUnresolved =
+              reports
+                  .where(
+                    (r) =>
+                        r.status.toLowerCase() != 'resolved' &&
+                        now.difference(r.updatedAt).inDays > 7,
+                  )
+                  .toList()
+                ..sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+          final top5Unresolved = top5OldUnresolved.take(5).toList();
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 32),
+
+                // KPI Cards
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: GridView.count(
+                    crossAxisCount: 5,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 2.2,
+                    children: [
+                      _buildKPICard(
+                        'New Reports',
+                        newReports24h.length,
+                        Colors.blue.shade600,
+                        Icons.fiber_new,
+                      ),
+                      _buildKPICard(
+                        'Unviewed',
+                        unviewedReports.length,
+                        const Color.fromARGB(255, 251, 0, 0),
+                        Icons.visibility_off,
+                      ),
+                      _buildKPICard(
+                        'In Progress',
+                        inProgressReports.length,
+                        Colors.amber.shade700,
+                        Icons.pending_actions,
+                      ),
+                      _buildKPICard(
+                        'Resolved',
+                        resolvedReports.length,
+                        Colors.green.shade600,
+                        Icons.check_circle,
+                      ),
+                      _buildKPICard(
+                        'Total Reports',
+                        totalReports,
+                        Colors.purple.shade600,
+                        Icons.folder_open,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Content sections
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      // Top 5 New Reports
+                      _buildTop5Section(
+                        'Recent Reports',
+                        'New submissions in the last 24 hours',
+                        top5New,
+                        context,
+                        Colors.blue,
+                        Icons.schedule,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Top 5 Unresolved >1 week
+                      _buildTop5Section(
+                        'Requires Attention',
+                        'No updates for more than 7 days',
+                        top5Unresolved,
+                        context,
+                        Colors.red,
+                        Icons.warning_amber_rounded,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildKPICard(String title, int count, Color color, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.2), color.withOpacity(0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icon on the left
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            // Number and title in same line, close together
+            Row(
+              children: [
+                Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade900,
+                  ),
+                ),
+                const SizedBox(width: 8), // small gap
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -252,65 +272,282 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionCard(Report report) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
+  Widget _buildTop5Section(
+    String title,
+    String subtitle,
+    List<Report> reports,
+    BuildContext context,
+    Color accentColor,
+    IconData icon,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.05),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: accentColor, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accentColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${reports.length}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Reports list
+          if (reports.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 48,
+                      color: Colors.grey.shade300,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No reports in this category',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: reports.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final report = reports[index];
+                return _buildReportCard(report, context, accentColor);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportCard(Report report, BuildContext context, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
+            // Status indicator
             Container(
-              padding: const EdgeInsets.all(8),
+              width: 4,
+              height: 60,
               decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.expand_circle_down,
-                color: Colors.orange.shade700,
+                color: color,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
+
             const SizedBox(width: 16),
+
+            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    report.category,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Category with badge
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          report.category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          report.status,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    report.exactLocation,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+
+                  const SizedBox(height: 10),
+
+                  // Location
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          report.exactLocation,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Reported: ${_formatDate(report.createdAt)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+
+                  const SizedBox(height: 6),
+
+                  // Date
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatDate(report.createdAt),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
+
+            const SizedBox(width: 12),
+
+            // Review button
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => ReportDetailModal(report: report),
+                );
+              },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade700,
+                backgroundColor: color,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                  horizontal: 20,
+                  vertical: 12,
                 ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
               ),
-              child: const Text('Review', style: TextStyle(fontSize: 12)),
+              child: const Text(
+                'Review',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -322,14 +559,10 @@ class DashboardPage extends StatelessWidget {
     final now = DateTime.now();
     final difference = now.difference(date);
 
-    if (difference.inHours < 1) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

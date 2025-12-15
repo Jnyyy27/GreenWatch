@@ -70,20 +70,20 @@ class NavigationSidebar extends StatelessWidget {
             child: Row(
               children: [
                 // Placeholder for department logo/image
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300, width: 1),
-                  ),
-                  child: Icon(
-                    Icons.apartment,
-                    color: Colors.grey.shade400,
-                    size: 24,
-                  ),
-                ),
+                // Container(
+                //   width: 48,
+                //   height: 48,
+                //   decoration: BoxDecoration(
+                //     color: const Color(0xFFF5F5F5),
+                //     borderRadius: BorderRadius.circular(12),
+                //     border: Border.all(color: Colors.grey.shade300, width: 1),
+                //   ),
+                //   // child: Icon(
+                //   //   Icons.apartment,
+                //   //   color: Colors.grey.shade400,
+                //   //   size: 24,
+                //   // ),
+                // ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -93,7 +93,7 @@ class NavigationSidebar extends StatelessWidget {
                         department,
                         style: const TextStyle(
                           color: Color(0xFF1a1a1a),
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                         ),
