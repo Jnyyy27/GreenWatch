@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import 'my_reports_screen.dart';
+import 'notification_screen.dart'; // Ensure notification_screen.dart exists in the same folder
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -19,8 +20,8 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Header Section (Green Background with User Info)
-            _buildHeader(user),
+            // 1. Header Section (Green Background with User Info + Notification Bell)
+            _buildHeader(context, user),
 
             // 2. Stats Dashboard (Overlapping Card)
             Transform.translate(
@@ -41,68 +42,92 @@ class ProfileScreen extends StatelessWidget {
 
   // --- Widget Builders ---
 
-  Widget _buildHeader(User? user) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.only(top: 60, bottom: 50, left: 20, right: 20),
-      decoration: BoxDecoration(
-        color: _primaryGreen,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+  Widget _buildHeader(BuildContext context, User? user) {
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.only(top: 60, bottom: 50, left: 20, right: 20),
+          decoration: BoxDecoration(
+            color: _primaryGreen,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
+          ),
+          child: FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user?.uid)
+                .get(),
+            builder: (context, snapshot) {
+              String displayName = "Loading...";
+              String displayEmail = user?.email ?? "";
+
+              if (snapshot.hasData && snapshot.data!.exists) {
+                final data = snapshot.data!.data() as Map<String, dynamic>;
+                displayName = data['name'] ?? "User";
+              } else if (snapshot.hasError) {
+                displayName = "User";
+              }
+
+              return Column(
+                children: [
+                  // Profile Avatar with Custom Image
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: const CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.white,
+                      // Load the local asset image here
+                      backgroundImage: AssetImage('assets/images/greenwatch.png'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Welcome Text
+                  Text(
+                    "Welcome, $displayName",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    displayEmail,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
-      ),
-      child: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
-            .collection('users')
-            .doc(user?.uid)
-            .get(),
-        builder: (context, snapshot) {
-          String displayName = "Loading...";
-          String displayEmail = user?.email ?? "";
-
-          if (snapshot.hasData && snapshot.data!.exists) {
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            displayName = data['name'] ?? "User";
-          } else if (snapshot.hasError) {
-            displayName = "User";
-          }
-
-          return Column(
-            children: [
-              // Profile Avatar with Custom Image
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
+        
+        // --- BELL ICON (Top Right) ---
+        Positioned(
+          top: 40, // Adjust for safe area
+          right: 16,
+          child: IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            tooltip: 'Notifications',
+            onPressed: () {
+              // Navigate to the Notification Screen
+              // FIX: Removed 'const' keyword here to prevent build error
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationScreen(),
                 ),
-                child: const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  // Load the local asset image here:
-                  backgroundImage: AssetImage('greenwatch.png'),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Welcome Text
-              Text(
-                "Welcome, $displayName",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                displayEmail,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
-          );
-        },
-      ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -183,22 +208,9 @@ class ProfileScreen extends StatelessWidget {
             title: "My Reports",
             subtitle: "Check status of submitted issues",
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("My Reports feature coming soon!"),
-                ),
-              );
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const MyReportsScreen()));
-            },
-          ),
-
-          _buildMenuTile(
-            icon: Icons.notifications_active_outlined,
-            title: "Notifications",
-            subtitle: "Updates on your reports",
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("No new notifications")),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MyReportsScreen()),
               );
             },
           ),

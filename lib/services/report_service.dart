@@ -133,6 +133,39 @@ class ReportService {
     }
   }
 
+  // Toggle Like Status
+  Future<void> toggleLike(String reportId, String userId) async {
+    // Note: IssuesScreen reads from 'reports' collection
+    final DocumentReference reportRef = _firestore.collection('reports').doc(reportId);
+
+    return _firestore.runTransaction((transaction) async {
+      final DocumentSnapshot snapshot = await transaction.get(reportRef);
+
+      if (!snapshot.exists) {
+        throw Exception("Report does not exist!");
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      List<String> likedBy = List<String>.from(data['likedBy'] ?? []);
+      int likesCount = data['likesCount'] ?? 0;
+
+      if (likedBy.contains(userId)) {
+        // User already liked, so UNLIKE
+        likedBy.remove(userId);
+        likesCount = likesCount > 0 ? likesCount - 1 : 0;
+      } else {
+        // User hasn't liked, so LIKE
+        likedBy.add(userId);
+        likesCount++;
+      }
+
+      transaction.update(reportRef, {
+        'likedBy': likedBy,
+        'likesCount': likesCount,
+      });
+    });
+  }
+
   // Submit report to Firestore
   Future<String> submitReport({
     required String category,
@@ -198,6 +231,8 @@ class ReportService {
         'latitude': latitude,
         'longitude': longitude,
         'status': 'pending verification',
+        'likesCount': 0, // Initialize like count
+        'likedBy': [],   // Initialize likedBy list
         //'imageUrl': imageUrl ?? '',
         'imageBase64Thumbnail': imageBase64Thumbnail ?? '',
         'createdAt': FieldValue.serverTimestamp(),
