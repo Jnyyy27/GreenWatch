@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:green_watch/app_mobile/screens/issue_detail_screen.dart';
+import 'package:green_watch/services/report_service.dart';
 
 class IssuesScreen extends StatefulWidget {
   const IssuesScreen({super.key});
@@ -15,6 +17,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
   String? _selectedCategory;
   String _areaSearchQuery = '';
   final TextEditingController _areaSearchController = TextEditingController();
+  final ReportService _reportService = ReportService();
+  final Set<String> _likeInProgress = {};
 
   final List<String> _categories = [
     'Damage roads',
@@ -30,6 +34,45 @@ class _IssuesScreenState extends State<IssuesScreen> {
   void dispose() {
     _areaSearchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleLike(String docId) async {
+    if (_likeInProgress.contains(docId)) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in to like issues.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _likeInProgress.add(docId);
+    });
+
+    try {
+      await _reportService.toggleLike(docId, user.uid);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to update like. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _likeInProgress.remove(docId);
+        });
+      }
+    }
   }
 
   String _getRelativeTime(DateTime dateTime) {
@@ -54,7 +97,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   bool _matchesFilters(Map<String, dynamic> data) {
-    // Check category filter
     if (_selectedCategory != null) {
       final category = data['category'] as String? ?? '';
       if (category != _selectedCategory) return false;
@@ -437,6 +479,37 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   return _matchesFilters(data);
                 }).toList();
 
+                filteredDocs.sort((a, b) {
+                  final dataA = a.data() as Map<String, dynamic>;
+                  final dataB = b.data() as Map<String, dynamic>;
+                  final likesA =
+                      (dataA['likesCount'] is int)
+                          ? dataA['likesCount'] as int
+                          : (dataA['likesCount'] as num?)?.toInt() ?? 0;
+                  final likesB =
+                      (dataB['likesCount'] is int)
+                          ? dataB['likesCount'] as int
+                          : (dataB['likesCount'] as num?)?.toInt() ?? 0;
+                  if (likesA != likesB) {
+                    return likesB.compareTo(likesA);
+                  }
+
+                  final timestampA = dataA['createdAt'];
+                  final timestampB = dataB['createdAt'];
+                  DateTime? dateA;
+                  DateTime? dateB;
+                  if (timestampA is Timestamp) dateA = timestampA.toDate();
+                  if (timestampB is Timestamp) dateB = timestampB.toDate();
+
+                  if (dateA != null && dateB != null) {
+                    return dateB.compareTo(dateA);
+                  }
+
+                  return 0;
+                });
+
+                final currentUser = FirebaseAuth.instance.currentUser;
+
                 if (docs.isEmpty) {
                   return Center(
                     child: Padding(
@@ -540,6 +613,22 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                     filteredDocs[index].data()
                                         as Map<String, dynamic>;
                                 final docId = filteredDocs[index].id;
+                                final likesCount =
+                                    (data['likesCount'] is int)
+                                        ? data['likesCount'] as int
+                                        : (data['likesCount'] as num?)?.toInt() ??
+                                            0;
+                                final List<String> likedBy =
+                                    data['likedBy'] is Iterable
+                                        ? List<String>.from(
+                                            data['likedBy'] as Iterable,
+                                          )
+                                        : <String>[];
+                                final bool isLiked = currentUser != null &&
+                                    likedBy.contains(currentUser.uid);
+                                final bool likeLoading =
+                                    _likeInProgress.contains(docId);
+                                final bool isPriority = index < 3;
                                 final category =
                                     data['category'] as String? ?? '';
                                 final description =
@@ -626,12 +715,54 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                category,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                ),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      category,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (isPriority)
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets
+                                                              .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color
+                                                            .fromARGB(
+                                                          255,
+                                                          255,
+                                                          224,
+                                                          178,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                      ),
+                                                      child: const Text(
+                                                        'PRIORITY',
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Color.fromARGB(
+                                                            255,
+                                                            176,
+                                                            88,
+                                                            0,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
                                               ),
                                               const SizedBox(height: 8),
                                               Text(
@@ -694,6 +825,79 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     color: Colors.grey.shade500,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            12,
+                                            0,
+                                            12,
+                                            12,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  onTap: likeLoading
+                                                      ? null
+                                                      : () => _toggleLike(docId),
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(4),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          isLiked
+                                                              ? Icons.favorite
+                                                              : Icons
+                                                                  .favorite_border,
+                                                          size: 22,
+                                                          color: isLiked
+                                                              ? const Color
+                                                                  .fromARGB(
+                                                                  255,
+                                                                  220,
+                                                                  95,
+                                                                  95,
+                                                                )
+                                                              : Colors
+                                                                  .grey.shade600,
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Text(
+                                                          '$likesCount like${likesCount == 1 ? '' : 's'}',
+                                                          style: TextStyle(
+                                                            fontSize: 13,
+                                                            color: Colors
+                                                                .grey.shade700,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              if (likeLoading)
+                                                SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                            Color>(
+                                                      Colors.grey.shade400,
+                                                    ),
                                                   ),
                                                 ),
                                             ],
