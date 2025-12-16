@@ -190,6 +190,7 @@ class ReportService {
       // Create report data
       final Map<String, dynamic> reportData = {
         'reportId': reportId,
+        'userId': userId,
         'category': category,
         'department': department,
         'description': description,
