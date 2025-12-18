@@ -136,7 +136,9 @@ class ReportService {
   // Toggle Like Status
   Future<void> toggleLike(String reportId, String userId) async {
     // Note: IssuesScreen reads from 'reports' collection
-    final DocumentReference reportRef = _firestore.collection('reports').doc(reportId);
+    final DocumentReference reportRef = _firestore
+        .collection('reports')
+        .doc(reportId);
 
     return _firestore.runTransaction((transaction) async {
       final DocumentSnapshot snapshot = await transaction.get(reportRef);
@@ -185,7 +187,7 @@ class ReportService {
 
       // Create report document
       final DocumentReference reportRef = _firestore
-          .collection('my_reports')
+          .collection('reports')
           .doc();
       final String reportId = reportRef.id;
       print('🆔 Report ID generated: $reportId');
@@ -232,7 +234,7 @@ class ReportService {
         'longitude': longitude,
         'status': 'pending verification',
         'likesCount': 0, // Initialize like count
-        'likedBy': [],   // Initialize likedBy list
+        'likedBy': [], // Initialize likedBy list
         //'imageUrl': imageUrl ?? '',
         'imageBase64Thumbnail': imageBase64Thumbnail ?? '',
         'createdAt': FieldValue.serverTimestamp(),

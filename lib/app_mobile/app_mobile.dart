@@ -127,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _setupReportsListener() {
     _reportsSubscription = FirebaseFirestore.instance
         .collection('reports')
-        .where('status', isEqualTo: 'submitted ')
+        .where('status', isEqualTo: 'submitted')
         .snapshots()
         .listen((snapshot) {
           if (mounted) {
@@ -236,6 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // Update markers from Firestore snapshot (only if documents changed)
+  // Hides reports whose status is "resolved" from the map.
   Future<void> _updateMarkersFromSnapshot(QuerySnapshot snapshot) async {
     try {
       // Check if documents have actually changed
@@ -255,6 +256,12 @@ class _MyHomePageState extends State<MyHomePage> {
         final category = data['category'] as String? ?? '';
         final description = data['description'] as String? ?? '';
         final location = data['exactLocation'] as String? ?? '';
+        final status = (data['status'] as String? ?? '').toLowerCase();
+
+        // Skip resolved reports so they don't appear on the map
+        if (status == 'Resolved') {
+          continue;
+        }
 
         if (latitude != null && longitude != null) {
           final assetPath = _getMarkerAssetPath(category);

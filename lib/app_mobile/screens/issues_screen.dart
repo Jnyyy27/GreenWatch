@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:green_watch/app_mobile/screens/issue_detail_screen.dart';
+import 'package:green_watch/app_mobile/screens/resolved_issue_detail_screen.dart';
 import 'package:green_watch/services/report_service.dart';
 
 class IssuesScreen extends StatefulWidget {
@@ -19,6 +20,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
   final TextEditingController _areaSearchController = TextEditingController();
   final ReportService _reportService = ReportService();
   final Set<String> _likeInProgress = {};
+  bool _showResolvedIssues =
+      false; // Toggle between unresolved and resolved issues
 
   final List<String> _categories = [
     'Damage roads',
@@ -44,9 +47,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
     if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please sign in to like issues.'),
-          ),
+          const SnackBar(content: Text('Please sign in to like issues.')),
         );
       }
       return;
@@ -97,6 +98,14 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   bool _matchesFilters(Map<String, dynamic> data) {
+    // Only show resolved issues when toggle is on, otherwise hide them
+    final status = (data['status'] as String? ?? '').toLowerCase();
+    if (_showResolvedIssues) {
+      if (status != 'resolved') return false;
+    } else {
+      if (status == 'resolved') return false;
+    }
+
     if (_selectedCategory != null) {
       final category = data['category'] as String? ?? '';
       if (category != _selectedCategory) return false;
@@ -220,6 +229,81 @@ class _IssuesScreenState extends State<IssuesScreen> {
     );
   }
 
+  Widget _buildStatusToggleBar() {
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade800,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildToggleButton(
+                  label: 'Active Issues',
+                  isSelected: !_showResolvedIssues,
+                  onTap: () {
+                    setState(() {
+                      _showResolvedIssues = false;
+                    });
+                  },
+                ),
+                _buildToggleButton(
+                  label: 'Resolved Issues',
+                  isSelected: _showResolvedIssues,
+                  onTap: () {
+                    setState(() {
+                      _showResolvedIssues = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color.fromARGB(255, 96, 156, 101)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : Colors.grey.shade400,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterBar() {
     return Column(
       children: [
@@ -236,7 +320,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
                 // Filter Button
@@ -456,12 +540,17 @@ class _IssuesScreenState extends State<IssuesScreen> {
       ),
       body: Column(
         children: [
+          _buildStatusToggleBar(),
+          const SizedBox(height: 4),
           _buildFilterBar(),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('reports')
-                  .where('status', isEqualTo: 'submitted ')
+                  .where(
+                    'status',
+                    isEqualTo: _showResolvedIssues ? 'resolved' : 'submitted',
+                  )
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -482,14 +571,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 filteredDocs.sort((a, b) {
                   final dataA = a.data() as Map<String, dynamic>;
                   final dataB = b.data() as Map<String, dynamic>;
-                  final likesA =
-                      (dataA['likesCount'] is int)
-                          ? dataA['likesCount'] as int
-                          : (dataA['likesCount'] as num?)?.toInt() ?? 0;
-                  final likesB =
-                      (dataB['likesCount'] is int)
-                          ? dataB['likesCount'] as int
-                          : (dataB['likesCount'] as num?)?.toInt() ?? 0;
+                  final likesA = (dataA['likesCount'] is int)
+                      ? dataA['likesCount'] as int
+                      : (dataA['likesCount'] as num?)?.toInt() ?? 0;
+                  final likesB = (dataB['likesCount'] is int)
+                      ? dataB['likesCount'] as int
+                      : (dataB['likesCount'] as num?)?.toInt() ?? 0;
                   if (likesA != likesB) {
                     return likesB.compareTo(likesA);
                   }
@@ -518,13 +605,17 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.inbox,
+                            _showResolvedIssues
+                                ? Icons.check_circle_outline
+                                : Icons.inbox,
                             size: 64,
                             color: Colors.grey.shade400,
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No verified issues yet',
+                            _showResolvedIssues
+                                ? 'No resolved issues yet'
+                                : 'No active issues yet',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w600,
@@ -533,7 +624,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Once reports are verified they will appear here.',
+                            _showResolvedIssues
+                                ? 'Once reports are resolved they will appear here.'
+                                : 'Report an issue to get started.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
@@ -548,23 +641,23 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
                 return Column(
                   children: [
-                    // Results count
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      color: Colors.white,
-                      child: Text(
-                        '${filteredDocs.length} issue${filteredDocs.length != 1 ? 's' : ''} found',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
+                    // // Results count
+                    // Container(
+                    //   width: double.infinity,
+                    //   padding: const EdgeInsets.symmetric(
+                    //     horizontal: 16,
+                    //     vertical: 8,
+                    //   ),
+                    //   color: Colors.white,
+                    //   child: Text(
+                    //     '${filteredDocs.length} issue${filteredDocs.length != 1 ? 's' : ''} found',
+                    //     style: TextStyle(
+                    //       fontSize: 13,
+                    //       color: Colors.grey.shade600,
+                    //       fontWeight: FontWeight.w500,
+                    //     ),
+                    //   ),
+                    // ),
 
                     // Issues list
                     Expanded(
@@ -613,21 +706,21 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                     filteredDocs[index].data()
                                         as Map<String, dynamic>;
                                 final docId = filteredDocs[index].id;
-                                final likesCount =
-                                    (data['likesCount'] is int)
-                                        ? data['likesCount'] as int
-                                        : (data['likesCount'] as num?)?.toInt() ??
-                                            0;
+                                final likesCount = (data['likesCount'] is int)
+                                    ? data['likesCount'] as int
+                                    : (data['likesCount'] as num?)?.toInt() ??
+                                          0;
                                 final List<String> likedBy =
                                     data['likedBy'] is Iterable
-                                        ? List<String>.from(
-                                            data['likedBy'] as Iterable,
-                                          )
-                                        : <String>[];
-                                final bool isLiked = currentUser != null &&
+                                    ? List<String>.from(
+                                        data['likedBy'] as Iterable,
+                                      )
+                                    : <String>[];
+                                final bool isLiked =
+                                    currentUser != null &&
                                     likedBy.contains(currentUser.uid);
-                                final bool likeLoading =
-                                    _likeInProgress.contains(docId);
+                                final bool likeLoading = _likeInProgress
+                                    .contains(docId);
                                 final bool isPriority = index < 3;
                                 final category =
                                     data['category'] as String? ?? '';
@@ -692,16 +785,32 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                   ),
                                   child: InkWell(
                                     onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              IssueDetailScreen(
-                                                issueData: data,
-                                                docId: docId,
-                                              ),
-                                        ),
-                                      );
+                                      final status =
+                                          (data['status'] as String? ?? '')
+                                              .toLowerCase();
+                                      if (status == 'resolved') {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ResolvedIssueDetailScreen(
+                                                  issueData: data,
+                                                  docId: docId,
+                                                ),
+                                          ),
+                                        );
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                IssueDetailScreen(
+                                                  issueData: data,
+                                                  docId: docId,
+                                                ),
+                                          ),
+                                        );
+                                      }
                                     },
                                     borderRadius: BorderRadius.circular(12),
                                     child: Column(
@@ -730,22 +839,22 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                   if (isPriority)
                                                     Container(
                                                       padding:
-                                                          const EdgeInsets
-                                                              .symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: const Color
-                                                            .fromARGB(
-                                                          255,
-                                                          255,
-                                                          224,
-                                                          178,
-                                                        ),
+                                                        color:
+                                                            const Color.fromARGB(
+                                                              255,
+                                                              255,
+                                                              224,
+                                                              178,
+                                                            ),
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
                                                       ),
                                                       child: const Text(
                                                         'PRIORITY',
@@ -846,7 +955,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                       BorderRadius.circular(20),
                                                   onTap: likeLoading
                                                       ? null
-                                                      : () => _toggleLike(docId),
+                                                      : () =>
+                                                            _toggleLike(docId),
                                                   child: Padding(
                                                     padding:
                                                         const EdgeInsets.all(4),
@@ -856,26 +966,29 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                           isLiked
                                                               ? Icons.favorite
                                                               : Icons
-                                                                  .favorite_border,
+                                                                    .favorite_border,
                                                           size: 22,
                                                           color: isLiked
-                                                              ? const Color
-                                                                  .fromARGB(
+                                                              ? const Color.fromARGB(
                                                                   255,
                                                                   220,
                                                                   95,
                                                                   95,
                                                                 )
                                                               : Colors
-                                                                  .grey.shade600,
+                                                                    .grey
+                                                                    .shade600,
                                                         ),
-                                                        const SizedBox(width: 6),
+                                                        const SizedBox(
+                                                          width: 6,
+                                                        ),
                                                         Text(
                                                           '$likesCount like${likesCount == 1 ? '' : 's'}',
                                                           style: TextStyle(
                                                             fontSize: 13,
                                                             color: Colors
-                                                                .grey.shade700,
+                                                                .grey
+                                                                .shade700,
                                                             fontWeight:
                                                                 FontWeight.w600,
                                                           ),
@@ -890,14 +1003,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                 SizedBox(
                                                   width: 16,
                                                   height: 16,
-                                                  child:
-                                                      CircularProgressIndicator(
+                                                  child: CircularProgressIndicator(
                                                     strokeWidth: 2,
                                                     valueColor:
                                                         AlwaysStoppedAnimation<
-                                                            Color>(
-                                                      Colors.grey.shade400,
-                                                    ),
+                                                          Color
+                                                        >(Colors.grey.shade400),
                                                   ),
                                                 ),
                                             ],
