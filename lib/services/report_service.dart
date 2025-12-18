@@ -133,8 +133,8 @@ class ReportService {
     }
   }
 
-  // Toggle Like Status
-  Future<void> toggleLike(String reportId, String userId) async {
+  // Toggle Upvote Status
+  Future<void> toggleUpvote(String reportId, String userId) async {
     // Note: IssuesScreen reads from 'reports' collection
     final DocumentReference reportRef = _firestore
         .collection('reports')
@@ -148,22 +148,22 @@ class ReportService {
       }
 
       final data = snapshot.data() as Map<String, dynamic>;
-      List<String> likedBy = List<String>.from(data['likedBy'] ?? []);
-      int likesCount = data['likesCount'] ?? 0;
+      List<String> upvotedBy = List<String>.from(data['likedBy'] ?? []);
+      int upvoteCount = data['likesCount'] ?? 0;
 
-      if (likedBy.contains(userId)) {
-        // User already liked, so UNLIKE
-        likedBy.remove(userId);
-        likesCount = likesCount > 0 ? likesCount - 1 : 0;
+      if (upvotedBy.contains(userId)) {
+        // User already upvoted, so remove upvote
+        upvotedBy.remove(userId);
+        upvoteCount = upvoteCount > 0 ? upvoteCount - 1 : 0;
       } else {
-        // User hasn't liked, so LIKE
-        likedBy.add(userId);
-        likesCount++;
+        // User hasn't upvoted, so add upvote
+        upvotedBy.add(userId);
+        upvoteCount++;
       }
 
       transaction.update(reportRef, {
-        'likedBy': likedBy,
-        'likesCount': likesCount,
+        'likedBy': upvotedBy,
+        'likesCount': upvoteCount,
       });
     });
   }
@@ -233,8 +233,8 @@ class ReportService {
         'latitude': latitude,
         'longitude': longitude,
         'status': 'pending verification',
-        'likesCount': 0, // Initialize like count
-        'likedBy': [], // Initialize likedBy list
+        'likesCount': 0, // Initialize upvote count
+        'likedBy': [], // Initialize upvotedBy list
         //'imageUrl': imageUrl ?? '',
         'imageBase64Thumbnail': imageBase64Thumbnail ?? '',
         'createdAt': FieldValue.serverTimestamp(),

@@ -19,9 +19,25 @@ class _IssuesScreenState extends State<IssuesScreen> {
   String _areaSearchQuery = '';
   final TextEditingController _areaSearchController = TextEditingController();
   final ReportService _reportService = ReportService();
-  final Set<String> _likeInProgress = {};
+  final Set<String> _upvoteInProgress = {};
   bool _showResolvedIssues =
       false; // Toggle between unresolved and resolved issues
+  bool _sortByMostUpvoted = false;
+
+  String get _engagementAction =>
+      _showResolvedIssues ? 'like' : 'upvote';
+
+  String get _sortButtonLabel =>
+      _showResolvedIssues ? 'Most Liked' : 'Most Upvoted';
+
+  String get _sortChipLabel =>
+      _showResolvedIssues ? 'Most liked' : 'Most upvoted';
+
+  String _engagementCountLabel(int count) {
+    final singular = _showResolvedIssues ? 'like' : 'up';
+    final plural = _showResolvedIssues ? 'likes' : 'ups';
+    return '$count ${count == 1 ? singular : plural}';
+  }
 
   final List<String> _categories = [
     'Damage roads',
@@ -39,38 +55,40 @@ class _IssuesScreenState extends State<IssuesScreen> {
     super.dispose();
   }
 
-  Future<void> _toggleLike(String docId) async {
-    if (_likeInProgress.contains(docId)) return;
+  Future<void> _toggleUpvote(String docId) async {
+    if (_upvoteInProgress.contains(docId)) return;
 
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please sign in to like issues.')),
+          SnackBar(
+            content: Text('Please sign in to $_engagementAction issues.'),
+          ),
         );
       }
       return;
     }
 
     setState(() {
-      _likeInProgress.add(docId);
+      _upvoteInProgress.add(docId);
     });
 
     try {
-      await _reportService.toggleLike(docId, user.uid);
+      await _reportService.toggleUpvote(docId, user.uid);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to update like. Please try again.'),
+          SnackBar(
+            content: Text('Unable to update $_engagementAction. Please try again.'),
           ),
         );
       }
     } finally {
       if (mounted) {
         setState(() {
-          _likeInProgress.remove(docId);
+          _upvoteInProgress.remove(docId);
         });
       }
     }
@@ -377,12 +395,65 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         ],
                       ),
                     ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              Material(
+                color: _sortByMostUpvoted
+                    ? const Color.fromARGB(255, 96, 156, 101)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _sortByMostUpvoted = !_sortByMostUpvoted;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _sortByMostUpvoted
+                            ? const Color.fromARGB(255, 96, 156, 101)
+                            : Colors.grey.shade300,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.trending_up,
+                          size: 20,
+                          color: _sortByMostUpvoted
+                              ? Colors.white
+                              : Colors.grey.shade700,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _sortButtonLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _sortByMostUpvoted
+                                ? Colors.white
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+              ),
+              const SizedBox(width: 8),
 
-                // Compact Search Bar
-                Expanded(
+              // Compact Search Bar
+              Expanded(
                   child: TextField(
                     controller: _areaSearchController,
                     decoration: InputDecoration(
@@ -441,7 +512,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 ),
 
                 // Clear All Button (only show when filters active)
-                if (_selectedCategory != null || _areaSearchQuery.isNotEmpty)
+                if (_selectedCategory != null ||
+                    _areaSearchQuery.isNotEmpty ||
+                    _sortByMostUpvoted)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: IconButton(
@@ -452,6 +525,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         setState(() {
                           _selectedCategory = null;
                           _areaSearchQuery = '';
+                          _sortByMostUpvoted = false;
                           _areaSearchController.clear();
                         });
                       },
@@ -463,7 +537,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
         ),
 
         // Active Filters Chips (if any)
-        if (_selectedCategory != null || _areaSearchQuery.isNotEmpty)
+        if (_selectedCategory != null ||
+            _areaSearchQuery.isNotEmpty ||
+            _sortByMostUpvoted)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -502,6 +578,28 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       _areaSearchController.clear();
                       setState(() {
                         _areaSearchQuery = '';
+                      });
+                    },
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      96,
+                      156,
+                      101,
+                    ).withOpacity(0.1),
+                    labelStyle: const TextStyle(
+                      color: Color.fromARGB(255, 96, 156, 101),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                if (_sortByMostUpvoted)
+                  Chip(
+                    label: Text(_sortChipLabel),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: () {
+                      setState(() {
+                        _sortByMostUpvoted = false;
                       });
                     },
                     backgroundColor: const Color.fromARGB(
@@ -568,32 +666,34 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   return _matchesFilters(data);
                 }).toList();
 
-                filteredDocs.sort((a, b) {
-                  final dataA = a.data() as Map<String, dynamic>;
-                  final dataB = b.data() as Map<String, dynamic>;
-                  final likesA = (dataA['likesCount'] is int)
-                      ? dataA['likesCount'] as int
-                      : (dataA['likesCount'] as num?)?.toInt() ?? 0;
-                  final likesB = (dataB['likesCount'] is int)
-                      ? dataB['likesCount'] as int
-                      : (dataB['likesCount'] as num?)?.toInt() ?? 0;
-                  if (likesA != likesB) {
-                    return likesB.compareTo(likesA);
-                  }
+                if (_sortByMostUpvoted) {
+                  filteredDocs.sort((a, b) {
+                    final dataA = a.data() as Map<String, dynamic>;
+                    final dataB = b.data() as Map<String, dynamic>;
+                    final upvotesA = (dataA['likesCount'] is int)
+                        ? dataA['likesCount'] as int
+                        : (dataA['likesCount'] as num?)?.toInt() ?? 0;
+                    final upvotesB = (dataB['likesCount'] is int)
+                        ? dataB['likesCount'] as int
+                        : (dataB['likesCount'] as num?)?.toInt() ?? 0;
+                    if (upvotesA != upvotesB) {
+                      return upvotesB.compareTo(upvotesA);
+                    }
 
-                  final timestampA = dataA['createdAt'];
-                  final timestampB = dataB['createdAt'];
-                  DateTime? dateA;
-                  DateTime? dateB;
-                  if (timestampA is Timestamp) dateA = timestampA.toDate();
-                  if (timestampB is Timestamp) dateB = timestampB.toDate();
+                    final timestampA = dataA['createdAt'];
+                    final timestampB = dataB['createdAt'];
+                    DateTime? dateA;
+                    DateTime? dateB;
+                    if (timestampA is Timestamp) dateA = timestampA.toDate();
+                    if (timestampB is Timestamp) dateB = timestampB.toDate();
 
-                  if (dateA != null && dateB != null) {
-                    return dateB.compareTo(dateA);
-                  }
+                    if (dateA != null && dateB != null) {
+                      return dateB.compareTo(dateA);
+                    }
 
-                  return 0;
-                });
+                    return 0;
+                  });
+                }
 
                 final currentUser = FirebaseAuth.instance.currentUser;
 
@@ -706,22 +806,21 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                     filteredDocs[index].data()
                                         as Map<String, dynamic>;
                                 final docId = filteredDocs[index].id;
-                                final likesCount = (data['likesCount'] is int)
+                                final upvoteCount = (data['likesCount'] is int)
                                     ? data['likesCount'] as int
                                     : (data['likesCount'] as num?)?.toInt() ??
                                           0;
-                                final List<String> likedBy =
+                                final List<String> upvotedBy =
                                     data['likedBy'] is Iterable
                                     ? List<String>.from(
                                         data['likedBy'] as Iterable,
                                       )
                                     : <String>[];
-                                final bool isLiked =
+                                final bool isUpvoted =
                                     currentUser != null &&
-                                    likedBy.contains(currentUser.uid);
-                                final bool likeLoading = _likeInProgress
+                                    upvotedBy.contains(currentUser.uid);
+                                final bool upvoteLoading = _upvoteInProgress
                                     .contains(docId);
-                                final bool isPriority = index < 3;
                                 final category =
                                     data['category'] as String? ?? '';
                                 final description =
@@ -824,54 +923,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      category,
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  if (isPriority)
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 4,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color:
-                                                            const Color.fromARGB(
-                                                              255,
-                                                              255,
-                                                              224,
-                                                              178,
-                                                            ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              12,
-                                                            ),
-                                                      ),
-                                                      child: const Text(
-                                                        'PRIORITY',
-                                                        style: TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: Color.fromARGB(
-                                                            255,
-                                                            176,
-                                                            88,
-                                                            0,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
+                                              Text(
+                                                category,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
                                               ),
                                               const SizedBox(height: 8),
                                               Text(
@@ -953,22 +1010,22 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                 child: InkWell(
                                                   borderRadius:
                                                       BorderRadius.circular(20),
-                                                  onTap: likeLoading
+                                                  onTap: upvoteLoading
                                                       ? null
                                                       : () =>
-                                                            _toggleLike(docId),
+                                                            _toggleUpvote(docId),
                                                   child: Padding(
                                                     padding:
                                                         const EdgeInsets.all(4),
                                                     child: Row(
                                                       children: [
                                                         Icon(
-                                                          isLiked
+                                                          isUpvoted
                                                               ? Icons.favorite
                                                               : Icons
                                                                     .favorite_border,
                                                           size: 22,
-                                                          color: isLiked
+                                                          color: isUpvoted
                                                               ? const Color.fromARGB(
                                                                   255,
                                                                   220,
@@ -983,7 +1040,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                           width: 6,
                                                         ),
                                                         Text(
-                                                          '$likesCount like${likesCount == 1 ? '' : 's'}',
+                                                          _engagementCountLabel(
+                                                            upvoteCount,
+                                                          ),
                                                           style: TextStyle(
                                                             fontSize: 13,
                                                             color: Colors
@@ -999,7 +1058,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                                                 ),
                                               ),
                                               const Spacer(),
-                                              if (likeLoading)
+                                              if (upvoteLoading)
                                                 SizedBox(
                                                   width: 16,
                                                   height: 16,

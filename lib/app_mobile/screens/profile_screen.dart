@@ -227,17 +227,6 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 10),
 
           _buildMenuTile(
-            icon: Icons.people_outline,
-            title: "Community Page",
-            subtitle: "See what's happening nearby",
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Community Page coming soon!")),
-              );
-            },
-          ),
-
-          _buildMenuTile(
             icon: Icons.menu_book_outlined,
             title: "User Guidelines",
             subtitle: "How to use Green Watch",
