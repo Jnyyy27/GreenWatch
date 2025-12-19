@@ -133,6 +133,41 @@ class ReportService {
     }
   }
 
+  // Toggle Upvote Status
+  Future<void> toggleUpvote(String reportId, String userId) async {
+    // Note: IssuesScreen reads from 'reports' collection
+    final DocumentReference reportRef = _firestore
+        .collection('reports')
+        .doc(reportId);
+
+    return _firestore.runTransaction((transaction) async {
+      final DocumentSnapshot snapshot = await transaction.get(reportRef);
+
+      if (!snapshot.exists) {
+        throw Exception("Report does not exist!");
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      List<String> upvotedBy = List<String>.from(data['likedBy'] ?? []);
+      int upvoteCount = data['likesCount'] ?? 0;
+
+      if (upvotedBy.contains(userId)) {
+        // User already upvoted, so remove upvote
+        upvotedBy.remove(userId);
+        upvoteCount = upvoteCount > 0 ? upvoteCount - 1 : 0;
+      } else {
+        // User hasn't upvoted, so add upvote
+        upvotedBy.add(userId);
+        upvoteCount++;
+      }
+
+      transaction.update(reportRef, {
+        'likedBy': upvotedBy,
+        'likesCount': upvoteCount,
+      });
+    });
+  }
+
   // Submit report to Firestore
   Future<String> submitReport({
     required String category,
@@ -152,7 +187,7 @@ class ReportService {
 
       // Create report document
       final DocumentReference reportRef = _firestore
-          .collection('my_reports')
+          .collection('reports')
           .doc();
       final String reportId = reportRef.id;
       print('🆔 Report ID generated: $reportId');
@@ -190,6 +225,7 @@ class ReportService {
       // Create report data
       final Map<String, dynamic> reportData = {
         'reportId': reportId,
+        'userId': userId,
         'category': category,
         'department': department,
         'description': description,
@@ -197,6 +233,8 @@ class ReportService {
         'latitude': latitude,
         'longitude': longitude,
         'status': 'pending verification',
+        'likesCount': 0, // Initialize upvote count
+        'likedBy': [], // Initialize upvotedBy list
         //'imageUrl': imageUrl ?? '',
         'imageBase64Thumbnail': imageBase64Thumbnail ?? '',
         'createdAt': FieldValue.serverTimestamp(),
