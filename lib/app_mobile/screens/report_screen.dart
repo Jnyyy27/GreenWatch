@@ -6,7 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import '../../services/report_service.dart';
 import 'map_search_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -399,7 +398,7 @@ class _ReportScreenState extends State<ReportScreen> {
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser; 
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _showSnackBar('You must be logged in to submit.', Colors.red, Icons.lock);
       return;
@@ -552,7 +551,6 @@ class _ReportScreenState extends State<ReportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-
                     // Category Dropdown
                     _buildSectionLabel('Issue Category', required: true),
                     const SizedBox(height: 10),

@@ -4,9 +4,8 @@ import 'navigation_sidebar.dart';
 import 'dashboard_page.dart';
 import 'report_queue_page.dart';
 import 'announcements_page.dart';
-import 'community_page.dart';
+import 'history_page.dart';
 import 'analytics_page.dart';
-import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
   final String department;
@@ -33,9 +32,8 @@ class _HomePageState extends State<HomePage> {
       DashboardPage(department: _departmentCode),
       ReportQueuePage(department: _departmentCode),
       AnnouncementsPage(department: _departmentCode),
-      CommunityPage(department: _departmentCode),
+      HistoryPage(department: _departmentCode),
       AnalyticsPage(department: _departmentCode),
-      SettingsPage(department: _departmentCode),
     ];
   }
 

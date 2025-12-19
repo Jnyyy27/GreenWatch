@@ -24,12 +24,12 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
 
   final Map<String, List<String>> _departmentCategories = {
     'MBPP': [
-      'Public equipment problem',
-      'Damage/missing road signs',
+      'Public facilities',
+      'Roads signs',
       'Faded road markings',
-      'Traffic light problem',
+      'Traffic lights',
     ],
-    'TNB': ['Streetlights problem'],
+    'TNB': ['Streetlights'],
     'JKR': ['Damage roads', 'Road potholes'],
   };
 
@@ -91,6 +91,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   String _normalizeStatus(String status) {
     final normalizedStatus = status.toLowerCase().trim();
     final statusMap = {
+      'Submitted': 'Submitted',
       'submitted': 'Submitted',
       'viewed': 'Viewed',
       'in progress': 'In Progress',

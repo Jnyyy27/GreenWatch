@@ -107,8 +107,15 @@ class DashboardPage extends StatelessWidget {
               .toList();
 
           // Top 5 new reports
-          final top5NewReports = newReports24h
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          final top5NewReports =
+              newReports24h
+                  .where(
+                    (r) =>
+                        r.status.toLowerCase() != 'unsuccessful' &&
+                        r.status.toLowerCase() != 'resolved',
+                  )
+                  .toList()
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
           final top5New = top5NewReports.take(5).toList();
 
           // Top 5 unresolved >1 week
@@ -117,6 +124,7 @@ class DashboardPage extends StatelessWidget {
                   .where(
                     (r) =>
                         r.status.toLowerCase() != 'resolved' &&
+                        r.status.toLowerCase() != 'unsuccessful' &&
                         now.difference(r.updatedAt).inDays > 7,
                   )
                   .toList()

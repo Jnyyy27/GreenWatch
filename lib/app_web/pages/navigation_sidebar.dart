@@ -45,9 +45,8 @@ class NavigationSidebar extends StatelessWidget {
       ('Dashboard', Icons.home, 0),
       ('Report Queue', Icons.assignment, 1),
       ('Announcements', Icons.notifications, 2),
-      ('Community', Icons.public, 3),
+      ('History', Icons.history, 3),
       ('Analytics', Icons.analytics, 4),
-      ('Settings', Icons.settings, 5),
     ];
 
     return Container(
