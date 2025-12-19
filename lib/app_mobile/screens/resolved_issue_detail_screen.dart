@@ -128,120 +128,243 @@ class _ResolvedIssueDetailScreenState extends State<ResolvedIssueDetailScreen> {
   Widget _buildResolvedSection() {
     if (_resolvedEntry == null) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 232, 245, 233),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color.fromARGB(255, 96, 156, 101),
-          width: 1.2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Color.fromARGB(255, 96, 156, 101),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+
+        // Resolution Card
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color.fromARGB(255, 96, 156, 101),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromARGB(255, 96, 156, 101).withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.check_circle, color: Colors.white, size: 22),
-                SizedBox(width: 10),
-                Text(
-                  'Resolved',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status Header
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: const BoxDecoration(
+                  color: Color.fromARGB(255, 96, 156, 101),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(11),
+                    topRight: Radius.circular(11),
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Content
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Notes 
-                if (_resolvedEntry!.notes.isNotEmpty)
-                  Text(
-                    _resolvedEntry!.notes,
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      color: Colors.grey.shade800,
-                      height: 1.6,
-                      fontWeight: FontWeight.bold,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                  ),
-
-                // Images
-                if (_resolvedEntry!.images.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 1,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.6,
-                        ),
-                    itemCount: _resolvedEntry!.images.length,
-                    itemBuilder: (context, index) {
-                      try {
-                        final bytes = base64Decode(
-                          _resolvedEntry!.images[index],
-                        );
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(bytes, fit: BoxFit.cover),
-                        );
-                      } catch (_) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.broken_image,
-                            color: Colors.grey.shade500,
-                            size: 36,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
-
-                // Timestamp 
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '${_resolvedEntry!.timestamp.toString().split('.')[0]} '
-                    '(${_getRelativeTime(_resolvedEntry!.timestamp)})',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Issue Resolved',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Resolution Notes
+                    if (_resolvedEntry!.notes.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.description_outlined,
+                                  size: 16,
+                                  color: Colors.grey.shade700,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Resolution Notes',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _resolvedEntry!.notes,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade800,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Resolution Images
+                    if (_resolvedEntry!.images.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Resolution Photos',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: _resolvedEntry!.images.length > 1
+                              ? 2
+                              : 1,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: _resolvedEntry!.images.length > 1
+                              ? 1.2
+                              : 1.2,
+                        ),
+                        itemCount: _resolvedEntry!.images.length,
+                        itemBuilder: (context, index) {
+                          try {
+                            final bytes = base64Decode(
+                              _resolvedEntry!.images[index],
+                            );
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Image.memory(bytes, fit: BoxFit.cover),
+                              ),
+                            );
+                          } catch (_) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey.shade400,
+                                size: 36,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+
+                    // Timestamp
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(
+                          255,
+                          96,
+                          156,
+                          101,
+                        ).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 14,
+                            color: const Color.fromARGB(255, 96, 156, 101),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_resolvedEntry!.timestamp.toString().split('.')[0]}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color.fromARGB(255, 96, 156, 101),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            ' • ${_getRelativeTime(_resolvedEntry!.timestamp)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
