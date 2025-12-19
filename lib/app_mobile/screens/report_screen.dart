@@ -4,20 +4,25 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:io';
 import '../../services/report_service.dart';
+import '../../services/ml_validator_service.dart';
+import '../../widgets/report_validation_helper.dart';
 import 'map_search_screen.dart';
 
-class ReportScreen extends StatefulWidget {
-  const ReportScreen({super.key});
+class ReportScreenWithMLValidation extends StatefulWidget {
+  const ReportScreenWithMLValidation({super.key});
 
   @override
-  State<ReportScreen> createState() => _ReportScreenState();
+  State<ReportScreenWithMLValidation> createState() =>
+      _ReportScreenWithMLValidationState();
 }
 
-class _ReportScreenState extends State<ReportScreen> {
+class _ReportScreenWithMLValidationState
+    extends State<ReportScreenWithMLValidation> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final ReportService _reportService = ReportService();
+  late MLValidatorService _mlValidator;
 
   String? _selectedCategory;
   String _department = '';
@@ -38,9 +43,16 @@ class _ReportScreenState extends State<ReportScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _mlValidator = MLValidatorService();
+  }
+
+  @override
   void dispose() {
     _descriptionController.dispose();
     _locationController.dispose();
+    _mlValidator.dispose();
     super.dispose();
   }
 
@@ -174,29 +186,16 @@ class _ReportScreenState extends State<ReportScreen> {
         : 'Location: ${_latitude?.toStringAsFixed(6)}, ${_longitude?.toStringAsFixed(6)}';
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
+  Future<void> _pickImageWithValidation() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-      if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar(
-          'Error picking image: $e',
-          Colors.red,
-          Icons.error_outline,
-        );
-      }
+    if (image == null) return;
+
+    if (mounted) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
     }
   }
 
@@ -249,7 +248,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 color: Colors.blue,
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImage();
+                  _pickImageWithValidation();
                 },
               ),
               const SizedBox(height: 12),
@@ -365,6 +364,303 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
+  Future<void> _validateAndShowResults(String reportId) async {
+    try {
+      if (_selectedImage == null) {
+        print('⚠️ Validation skipped: no selected image');
+        return;
+      }
+
+      final imagePath = _selectedImage!.path;
+      final hasLocationAndCategory =
+          _selectedCategory != null && _latitude != null && _longitude != null;
+
+      // Step 1: Validate image content with hybrid strategy (confidence + semantics + description)
+      ValidationResult validationResult;
+      try {
+        validationResult = await _mlValidator.validateImage(
+          imagePath,
+          category: _selectedCategory ?? 'unknown',
+          description: _descriptionController.text,
+        );
+        print(
+          'ℹ️ Validation result: isValid=${validationResult.isValid}, message=${validationResult.message}',
+        );
+        if (validationResult.topPrediction != null) {
+          print(
+            'ℹ️ Top prediction: ${validationResult.topPrediction!.label} (${(validationResult.topPrediction!.confidence * 100).toStringAsFixed(2)}%)',
+          );
+        }
+      } catch (e, st) {
+        print('❌ Exception during validateImage: $e');
+        print(st);
+        rethrow;
+      }
+
+      DuplicateDetectionResult? duplicateResult;
+      if (hasLocationAndCategory) {
+        try {
+          duplicateResult = await _mlValidator.checkForDuplicates(
+            imagePath: imagePath,
+            category: _selectedCategory!,
+            latitude: _latitude!,
+            longitude: _longitude!,
+            similarityThreshold: 0.85,
+          );
+        } catch (e, st) {
+          print('❌ Exception during checkForDuplicates: $e');
+          print(st);
+        }
+      } else {
+        print('ℹ️ Skipping duplicate check: missing category or location');
+      }
+
+      // Normalize duplicate result into local non-nullable variables to avoid any null dereference
+      final bool dupIsDuplicate = duplicateResult?.isDuplicate ?? false;
+      final double dupSimilarity = duplicateResult?.similarity ?? 0.0;
+      if (duplicateResult != null) {
+        print(
+          'ℹ️ Duplicate check result: isDuplicate=$dupIsDuplicate, similarity=$dupSimilarity',
+        );
+      }
+
+      final isValidationPassed =
+          validationResult.isValid || dupIsDuplicate || (dupSimilarity >= 0.85);
+
+      if (isValidationPassed) {
+        print('✅ Validation passed - updating status to successfully verified');
+        await _reportService.updateReportStatus(
+          reportId,
+          'successfully verified',
+        );
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('ML Validation Results'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Overall Status
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isValidationPassed
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      border: Border.all(
+                        color: isValidationPassed
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isValidationPassed
+                              ? Icons.verified_user
+                              : Icons.info_outline,
+                          color: isValidationPassed
+                              ? Colors.green
+                              : Colors.orange,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isValidationPassed
+                                    ? 'Successfully Verified ✓'
+                                    : 'Needs Review',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isValidationPassed
+                                      ? Colors.green
+                                      : Colors.orange,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isValidationPassed
+                                    ? 'Report passed all validations'
+                                    : 'Report requires manual verification',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Content validation result
+                  const Text(
+                    'Content Analysis:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    validationResult.message,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: validationResult.isValid
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Duplicate detection result
+                  const Text(
+                    'Duplicate Detection:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  if (dupIsDuplicate)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.05),
+                        border: Border.all(color: Colors.red),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.warning, color: Colors.red, size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Duplicate Found',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Similarity: ${(dupSimilarity * 100).toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (dupSimilarity > 0.6)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.05),
+                        border: Border.all(color: Colors.orange),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.info, color: Colors.orange, size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'Similar Report Found',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Similarity: ${(dupSimilarity * 100).toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.05),
+                        border: Border.all(color: Colors.green),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'No duplicates found',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Report ID: $reportId',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  if (validationResult.topPrediction != null) ...<Widget>[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Top Detection:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      validationResult.topPrediction.toString(),
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error validating image: $e');
+    }
+  }
+
   Future<void> _submitReport() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
@@ -402,14 +698,47 @@ class _ReportScreenState extends State<ReportScreen> {
     });
 
     try {
-      final String reportId = await _reportService.submitReport(
-        category: _selectedCategory!,
-        description: _descriptionController.text.trim(),
-        exactLocation: _locationController.text.trim(),
-        latitude: _latitude!,
-        longitude: _longitude!,
-        imageFile: _selectedImage,
-      );
+      final Map<String, dynamic> submitResult = await _reportService
+          .submitReport(
+            category: _selectedCategory!,
+            description: _descriptionController.text.trim(),
+            exactLocation: _locationController.text.trim(),
+            latitude: _latitude!,
+            longitude: _longitude!,
+            imageFile: _selectedImage,
+          );
+
+      final String reportId = submitResult['reportId'] as String;
+      final Map<String, dynamic>? verification =
+          submitResult['verification'] as Map<String, dynamic>?;
+
+      // Show immediate verification feedback if available
+      if (mounted && verification != null) {
+        final String vStatus = verification['status'] ?? 'pending verification';
+        final String vReason = verification['reason'] ?? '';
+
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(
+              vStatus == 'submitted'
+                  ? 'Report Submitted'
+                  : 'Verification Result',
+            ),
+            content: Text(
+              vReason.isNotEmpty
+                  ? vReason
+                  : 'No additional verification details',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -497,7 +826,8 @@ class _ReportScreenState extends State<ReportScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
+          // onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: _isSubmitting ? null : _pickImageWithValidation,
           tooltip: 'Back',
         ),
       ),

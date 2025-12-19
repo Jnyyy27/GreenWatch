@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img_pkg;
+import 'ml_validator_service.dart';
 
 class ReportService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -134,7 +135,8 @@ class ReportService {
   }
 
   // Submit report to Firestore
-  Future<String> submitReport({
+  // Returns a map containing `reportId` and `verification` result
+  Future<Map<String, dynamic>> submitReport({
     required String category,
     required String description,
     required String exactLocation,
@@ -158,6 +160,8 @@ class ReportService {
 
       String? imageUrl;
       String? imageBase64Thumbnail;
+      List<double>? imageEmbedding;
+
       if (imageFile != null) {
         print('📸 Uploading image...');
         try {
@@ -182,6 +186,30 @@ class ReportService {
           print('⚠️ Could not create Base64 thumbnail: $e');
           imageBase64Thumbnail = null;
         }
+
+        // Extract image embedding for duplicate detection
+        try {
+          print('🧠 Extracting image embedding for duplicate detection...');
+          // Create a temporary instance to extract embeddings
+          // This allows duplicate checking even if the ML validator hasn't been initialized elsewhere
+          final mlValidator = MLValidatorService();
+          await mlValidator.initialize();
+
+          imageEmbedding = await mlValidator.getImageEmbedding(imageFile.path);
+
+          if (imageEmbedding != null && imageEmbedding.isNotEmpty) {
+            print(
+              '✅ Image embedding extracted (length=${imageEmbedding.length})',
+            );
+          } else {
+            print('⚠️ Could not extract image embedding');
+          }
+
+          mlValidator.dispose();
+        } catch (e) {
+          print('⚠️ Error extracting embedding: $e');
+          imageEmbedding = null;
+        }
       } else {
         print('ℹ️ No image provided');
       }
@@ -198,6 +226,8 @@ class ReportService {
         'status': 'pending verification',
         //'imageUrl': imageUrl ?? '',
         'imageBase64Thumbnail': imageBase64Thumbnail ?? '',
+        if (imageEmbedding != null && imageEmbedding.isNotEmpty)
+          'embedding': imageEmbedding,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -228,7 +258,17 @@ class ReportService {
         throw Exception('Document was not saved - verification failed');
       }
 
-      return reportId;
+      // Trigger AI verification (category match + duplicate check + description verification)
+      final verification = await verifyReport(
+        reportId: reportId,
+        imagePath: imageFile?.path,
+        category: category,
+        description: description,
+        latitude: latitude,
+        longitude: longitude,
+      );
+
+      return {'reportId': reportId, 'verification': verification};
     } on FirebaseException catch (e) {
       print('❌ Firebase error: ${e.code} - ${e.message}');
       print('📚 Error details: ${e.toString()}');
@@ -249,6 +289,138 @@ class ReportService {
       print('❌ Error submitting report: $e');
       print('📚 Stack trace: $stackTrace');
       throw Exception('Error submitting report: $e');
+    }
+  }
+
+  /// Update report status in Firestore
+  Future<void> updateReportStatus(String reportId, String newStatus) async {
+    try {
+      print('🔄 Updating report status to: $newStatus');
+
+      await _firestore.collection('reports').doc(reportId).update({
+        'status': newStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      print('✅ Report status updated successfully');
+    } catch (e) {
+      print('❌ Error updating report status: $e');
+      throw Exception('Error updating report status: $e');
+    }
+  }
+
+  /// Run ML-based verification and duplicate detection for a saved report.
+  /// Uses hybrid strategy: confidence-based inference + semantic matching + user description verification
+  /// Returns a map with verification details and updates the report document with results.
+  Future<Map<String, dynamic>> verifyReport({
+    required String reportId,
+    String? imagePath,
+    required String category,
+    String? description,
+    required double latitude,
+    required double longitude,
+    double similarityThreshold = 0.85,
+  }) async {
+    final Map<String, dynamic> verification = {
+      'status': 'unsuccessful',
+      'reason': 'Verification not run',
+      'topPrediction': null,
+      'duplicateSimilarity': 0.0,
+      'isDuplicate': false,
+      'autoVerified': false,
+      'checkedAt': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      final mlValidator = MLValidatorService();
+      await mlValidator.initialize();
+
+      // If no image available, mark unsuccessful
+      if (imagePath == null) {
+        verification['reason'] = 'No image provided for verification';
+        await _firestore.collection('reports').doc(reportId).update({
+          'verificationStatus': verification['status'],
+          'verificationReason': verification['reason'],
+          'autoVerified': false,
+          'verificationCheckedAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        return verification;
+      }
+
+      // Run content validation with hybrid strategy: confidence + semantics + description
+      final validationResult = await mlValidator.validateImage(
+        imagePath,
+        category: category,
+        description: description,
+      );
+      verification['topPrediction'] = validationResult.topPrediction
+          ?.toString();
+
+      // If ML explicitly flagged as invalid, return unsuccessful with reason
+      if (!validationResult.isValid) {
+        verification['reason'] =
+            'Image does not match selected category: ${validationResult.topPrediction?.label ?? 'unknown'}';
+        verification['status'] = 'unsuccessful';
+      }
+
+      // Run duplicate check only if we still might accept (or always check for better diagnostics)
+      DuplicateDetectionResult dupResult = await mlValidator.checkForDuplicates(
+        imagePath: imagePath,
+        category: category,
+        latitude: latitude,
+        longitude: longitude,
+        similarityThreshold: similarityThreshold,
+      );
+
+      verification['duplicateSimilarity'] = dupResult.similarity;
+      verification['isDuplicate'] = dupResult.isDuplicate;
+
+      if (dupResult.isDuplicate) {
+        verification['reason'] =
+            'Duplicate report found (similarity ${(dupResult.similarity * 100).toStringAsFixed(1)}%)';
+        verification['status'] = 'unsuccessful';
+      }
+
+      // If ML validation passed and not duplicate -> submitted
+      if (validationResult.isValid && !dupResult.isDuplicate) {
+        verification['status'] = 'submitted';
+        verification['reason'] =
+            'Auto-verified: image matches category and not duplicated';
+        verification['autoVerified'] = true;
+      }
+
+      // Persist verification metadata in the report document
+      await _firestore.collection('reports').doc(reportId).update({
+        'verificationStatus': verification['status'],
+        'verificationReason': verification['reason'],
+        'verificationTopPrediction': verification['topPrediction'] ?? '',
+        'duplicateSimilarity': verification['duplicateSimilarity'],
+        'isDuplicate': verification['isDuplicate'],
+        'autoVerified': verification['autoVerified'],
+        'verificationCheckedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update main status field for routing
+      await updateReportStatus(reportId, verification['status']);
+
+      mlValidator.dispose();
+      return verification;
+    } catch (e, st) {
+      print('❌ Error during verifyReport: $e');
+      print(st);
+      // Store that verification failed but keep report in pending for manual review
+      verification['status'] = 'pending verification';
+      verification['reason'] = 'Verification error: $e';
+      await _firestore.collection('reports').doc(reportId).update({
+        'verificationStatus': verification['status'],
+        'verificationReason': verification['reason'],
+        'autoVerified': false,
+        'verificationCheckedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return verification;
     }
   }
 }

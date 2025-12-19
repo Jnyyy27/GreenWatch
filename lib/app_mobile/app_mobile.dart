@@ -214,7 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // --------------------
       // Tab 1: Report Screen
       // --------------------
-      const ReportScreen(),
+      const ReportScreenWithMLValidation(),
 
       // ---------------------
       // Tab 2: Profile Screen
