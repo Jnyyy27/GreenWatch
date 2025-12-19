@@ -131,45 +131,64 @@ class DashboardPage extends StatelessWidget {
                 // KPI Cards
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GridView.count(
-                    crossAxisCount: 5,
+                  child: GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 2.2,
-                    children: [
-                      _buildKPICard(
-                        'New Reports',
-                        newReports24h.length,
-                        Colors.blue.shade600,
-                        Icons.fiber_new,
-                      ),
-                      _buildKPICard(
-                        'Unviewed',
-                        unviewedReports.length,
-                        const Color.fromARGB(255, 251, 0, 0),
-                        Icons.visibility_off,
-                      ),
-                      _buildKPICard(
-                        'In Progress',
-                        inProgressReports.length,
-                        Colors.amber.shade700,
-                        Icons.pending_actions,
-                      ),
-                      _buildKPICard(
-                        'Resolved',
-                        resolvedReports.length,
-                        Colors.green.shade600,
-                        Icons.check_circle,
-                      ),
-                      _buildKPICard(
-                        'Total Reports',
-                        totalReports,
-                        Colors.purple.shade600,
-                        Icons.folder_open,
-                      ),
-                    ],
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      // CRITICAL: This dictates the minimum width of the cards.
+                      // 280.0 ensures that on mobile (width < 560), only 1 column shows.
+                      // On wider screens, 2, 3, 4, or 5 columns will show.
+                      maxCrossAxisExtent: 280.0,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio:
+                          2.8, // Adjusted ratio for better vertical spacing
+                    ),
+                    itemCount: 5, // Total number of KPIs
+                    itemBuilder: (context, index) {
+                      // Use a list to hold your KPI data
+                      final kpiData = [
+                        {
+                          'title': 'New Reports',
+                          'count': newReports24h.length,
+                          'color': Colors.blue.shade600,
+                          'icon': Icons.fiber_new,
+                        },
+                        {
+                          'title': 'Unviewed',
+                          'count': unviewedReports.length,
+                          'color': const Color.fromARGB(255, 251, 0, 0),
+                          'icon': Icons.visibility_off,
+                        },
+                        {
+                          'title': 'In Progress',
+                          'count': inProgressReports.length,
+                          'color': Colors.amber.shade700,
+                          'icon': Icons.pending_actions,
+                        },
+                        {
+                          'title': 'Resolved',
+                          'count': resolvedReports.length,
+                          'color': Colors.green.shade600,
+                          'icon': Icons.check_circle,
+                        },
+                        {
+                          'title': 'Total Reports',
+                          'count': totalReports,
+                          'color': Colors.purple.shade600,
+                          'icon': Icons.folder_open,
+                        },
+                      ];
+
+                      final data = kpiData[index];
+
+                      return _buildKPICard(
+                        data['title'] as String,
+                        data['count'] as int,
+                        data['color'] as Color,
+                        data['icon'] as IconData,
+                      );
+                    },
                   ),
                 ),
 
@@ -244,7 +263,7 @@ class DashboardPage extends StatelessWidget {
               child: Icon(icon, color: color, size: 28),
             ),
             const SizedBox(width: 16),
-            // Number and title in same line, close together
+            // Number and title in same line, close together /
             Row(
               children: [
                 Text(

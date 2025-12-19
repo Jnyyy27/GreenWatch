@@ -61,7 +61,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
             'action': 'Submitted',
             'timestamp': widget.report.createdAt,
             'user': 'System',
-            'notes': 'Report submitted',
+            'notes': 'Report submitted detail',
             'images': [],
           });
         }

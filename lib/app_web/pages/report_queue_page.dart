@@ -38,7 +38,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
     'Submitted',
     'Viewed',
     'In Progress',
-    'Resolved',
   ];
 
   // add this near your other fields
@@ -95,7 +94,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
       'submitted': 'Submitted',
       'viewed': 'Viewed',
       'in progress': 'In Progress',
-      'resolved': 'Resolved',
     };
     return statusMap[normalizedStatus] ?? status;
   }
@@ -438,6 +436,10 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                     stream: FirebaseFirestore.instance
                         .collection('reports')
                         .where('department', isEqualTo: widget.department)
+                        .where(
+                          'status',
+                          whereIn: ['submitted', 'viewed', 'in progress'],
+                        )
                         .orderBy('createdAt', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {

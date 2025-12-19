@@ -42,6 +42,7 @@ dependencies:
   image: ^4.0.15
   url_launcher: ^6.1.14
   photo_view: ^0.15.0
+  syncfusion_flutter_charts: ^26.2.10
 
 
   # The following adds the Cupertino Icons font to your application.
