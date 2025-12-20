@@ -12,6 +12,7 @@ import 'screens/report_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/issues_screen.dart';
 import 'screens/issue_detail_screen.dart';
+import 'screens/announcement_screen.dart';
 
 class MobileApp extends StatelessWidget {
   const MobileApp({super.key});
@@ -380,7 +381,12 @@ class _MyHomePageState extends State<MyHomePage> {
       const ReportScreen(),
 
       // ---------------------
-      // Tab 3: Profile Screen
+      // Tab 3: Announcement Screen
+      // ---------------------
+      const AnnouncementScreen(),
+
+      // ---------------------
+      // Tab 4: Profile Screen
       // ---------------------
       const ProfileScreen(),
     ];
@@ -390,10 +396,16 @@ class _MyHomePageState extends State<MyHomePage> {
       body: pages[_selectedIndex],
 
       bottomNavigationBar: BottomNavigationBar(
+        selectedFontSize: 11.5,
+        unselectedFontSize: 8,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Issues'),
           BottomNavigationBarItem(icon: Icon(Icons.report), label: 'Report'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.announcement),
+            label: 'Announcement',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
