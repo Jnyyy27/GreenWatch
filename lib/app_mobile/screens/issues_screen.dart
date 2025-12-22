@@ -20,9 +20,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
   final TextEditingController _areaSearchController = TextEditingController();
   final ReportService _reportService = ReportService();
   final Set<String> _upvoteInProgress = {};
-  bool _showResolvedIssues =
-      false; // Toggle between unresolved and resolved issues
+  bool _showResolvedIssues = false;
   bool _sortByMostUpvoted = false;
+  final PageController _pageController = PageController(initialPage: 0);
 
   String get _engagementAction =>
       _showResolvedIssues ? 'like' : 'upvote';
@@ -52,7 +52,22 @@ class _IssuesScreenState extends State<IssuesScreen> {
   @override
   void dispose() {
     _areaSearchController.dispose();
+    _pageController.dispose();
     super.dispose();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() {
+      _showResolvedIssues = page == 1;
+    });
+  }
+
+  void _switchToPage(int page) {
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _toggleUpvote(String docId) async {
@@ -116,7 +131,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   bool _matchesFilters(Map<String, dynamic> data) {
-    // Only show resolved issues when toggle is on, otherwise hide them
     final status = (data['status'] as String? ?? '').toLowerCase();
     if (_showResolvedIssues) {
       if (status != 'resolved') return false;
@@ -129,7 +143,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
       if (category != _selectedCategory) return false;
     }
 
-    // Check area filter
     if (_areaSearchQuery.isNotEmpty) {
       final location = (data['exactLocation'] as String? ?? '').toLowerCase();
       if (!location.contains(_areaSearchQuery.toLowerCase())) return false;
@@ -256,7 +269,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.grey.shade800,
+              color: const Color.fromARGB(255, 210, 236, 210),
               borderRadius: BorderRadius.circular(30),
             ),
             padding: const EdgeInsets.all(4),
@@ -266,20 +279,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 _buildToggleButton(
                   label: 'Active Issues',
                   isSelected: !_showResolvedIssues,
-                  onTap: () {
-                    setState(() {
-                      _showResolvedIssues = false;
-                    });
-                  },
+                  onTap: () => _switchToPage(0),
                 ),
                 _buildToggleButton(
                   label: 'Resolved Issues',
                   isSelected: _showResolvedIssues,
-                  onTap: () {
-                    setState(() {
-                      _showResolvedIssues = true;
-                    });
-                  },
+                  onTap: () => _switchToPage(1),
                 ),
               ],
             ),
@@ -325,7 +330,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
   Widget _buildFilterBar() {
     return Column(
       children: [
-        // Compact Filter Bar
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -341,7 +345,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                // Filter Button
                 Material(
                   color: _selectedCategory != null
                       ? const Color.fromARGB(255, 96, 156, 101)
@@ -395,65 +398,62 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         ],
                       ),
                     ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-
-              Material(
-                color: _sortByMostUpvoted
-                    ? const Color.fromARGB(255, 96, 156, 101)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _sortByMostUpvoted = !_sortByMostUpvoted;
-                    });
-                  },
+                const SizedBox(width: 8),
+                Material(
+                  color: _sortByMostUpvoted
+                      ? const Color.fromARGB(255, 96, 156, 101)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _sortByMostUpvoted
-                            ? const Color.fromARGB(255, 96, 156, 101)
-                            : Colors.grey.shade300,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _sortByMostUpvoted = !_sortByMostUpvoted;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
                       ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.trending_up,
-                          size: 20,
+                      decoration: BoxDecoration(
+                        border: Border.all(
                           color: _sortByMostUpvoted
-                              ? Colors.white
-                              : Colors.grey.shade700,
+                              ? const Color.fromARGB(255, 96, 156, 101)
+                              : Colors.grey.shade300,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _sortButtonLabel,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.trending_up,
+                            size: 20,
                             color: _sortByMostUpvoted
                                 ? Colors.white
                                 : Colors.grey.shade700,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            _sortButtonLabel,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _sortByMostUpvoted
+                                  ? Colors.white
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-
-              // Compact Search Bar
-              Expanded(
+                const SizedBox(width: 8),
+                Expanded(
                   child: TextField(
                     controller: _areaSearchController,
                     decoration: InputDecoration(
@@ -510,8 +510,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
                     },
                   ),
                 ),
-
-                // Clear All Button (only show when filters active)
                 if (_selectedCategory != null ||
                     _areaSearchQuery.isNotEmpty ||
                     _sortByMostUpvoted)
@@ -535,8 +533,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
             ),
           ),
         ),
-
-        // Active Filters Chips (if any)
         if (_selectedCategory != null ||
             _areaSearchQuery.isNotEmpty ||
             _sortByMostUpvoted)
@@ -557,12 +553,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         _selectedCategory = null;
                       });
                     },
-                    backgroundColor: const Color.fromARGB(
-                      255,
-                      96,
-                      156,
-                      101,
-                    ).withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(255, 96, 156, 101)
+                        .withOpacity(0.1),
                     labelStyle: const TextStyle(
                       color: Color.fromARGB(255, 96, 156, 101),
                       fontWeight: FontWeight.w600,
@@ -580,12 +572,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         _areaSearchQuery = '';
                       });
                     },
-                    backgroundColor: const Color.fromARGB(
-                      255,
-                      96,
-                      156,
-                      101,
-                    ).withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(255, 96, 156, 101)
+                        .withOpacity(0.1),
                     labelStyle: const TextStyle(
                       color: Color.fromARGB(255, 96, 156, 101),
                       fontWeight: FontWeight.w600,
@@ -602,12 +590,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         _sortByMostUpvoted = false;
                       });
                     },
-                    backgroundColor: const Color.fromARGB(
-                      255,
-                      96,
-                      156,
-                      101,
-                    ).withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(255, 96, 156, 101)
+                        .withOpacity(0.1),
                     labelStyle: const TextStyle(
                       color: Color.fromARGB(255, 96, 156, 101),
                       fontWeight: FontWeight.w600,
@@ -619,6 +603,372 @@ class _IssuesScreenState extends State<IssuesScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildIssuesList(bool isResolved) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .where('status', isEqualTo: isResolved ? 'resolved' : 'submitted')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+        final filteredDocs = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return _matchesFilters(data);
+        }).toList();
+
+        if (_sortByMostUpvoted) {
+          filteredDocs.sort((a, b) {
+            final dataA = a.data() as Map<String, dynamic>;
+            final dataB = b.data() as Map<String, dynamic>;
+            final upvotesA = (dataA['likesCount'] is int)
+                ? dataA['likesCount'] as int
+                : (dataA['likesCount'] as num?)?.toInt() ?? 0;
+            final upvotesB = (dataB['likesCount'] is int)
+                ? dataB['likesCount'] as int
+                : (dataB['likesCount'] as num?)?.toInt() ?? 0;
+            if (upvotesA != upvotesB) {
+              return upvotesB.compareTo(upvotesA);
+            }
+
+            final timestampA = dataA['createdAt'];
+            final timestampB = dataB['createdAt'];
+            DateTime? dateA;
+            DateTime? dateB;
+            if (timestampA is Timestamp) dateA = timestampA.toDate();
+            if (timestampB is Timestamp) dateB = timestampB.toDate();
+
+            if (dateA != null && dateB != null) {
+              return dateB.compareTo(dateA);
+            }
+
+            return 0;
+          });
+        }
+
+        final currentUser = FirebaseAuth.instance.currentUser;
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isResolved
+                        ? Icons.check_circle_outline
+                        : Icons.inbox,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isResolved
+                        ? 'No resolved issues yet'
+                        : 'No active issues yet',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isResolved
+                        ? 'Once reports are resolved they will appear here.'
+                        : 'Report an issue to get started.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (filteredDocs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.filter_alt_off,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No issues match your filters',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try adjusting your filters',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(12),
+          itemCount: filteredDocs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final data = filteredDocs[index].data() as Map<String, dynamic>;
+            final docId = filteredDocs[index].id;
+            final upvoteCount = (data['likesCount'] is int)
+                ? data['likesCount'] as int
+                : (data['likesCount'] as num?)?.toInt() ?? 0;
+            final List<String> upvotedBy = data['likedBy'] is Iterable
+                ? List<String>.from(data['likedBy'] as Iterable)
+                : <String>[];
+            final bool isUpvoted =
+                currentUser != null && upvotedBy.contains(currentUser.uid);
+            final bool upvoteLoading = _upvoteInProgress.contains(docId);
+            final category = data['category'] as String? ?? '';
+            final description = data['description'] as String? ?? '';
+            final location = data['exactLocation'] as String? ?? '';
+            final timestamp = data['createdAt'];
+            DateTime? dateTime;
+            if (timestamp is Timestamp) dateTime = timestamp.toDate();
+            final imageBase64 = data['imageBase64Thumbnail'] as String? ?? '';
+
+            Widget leading;
+            if (imageBase64.isNotEmpty) {
+              try {
+                final bytes = base64Decode(imageBase64);
+                leading = ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    bytes,
+                    width: 100,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              } catch (_) {
+                leading = Container(
+                  width: 100,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.grey.shade500,
+                  ),
+                );
+              }
+            } else {
+              leading = Container(
+                width: 100,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.image,
+                  color: Colors.grey.shade500,
+                ),
+              );
+            }
+
+            return Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () {
+                  final status = (data['status'] as String? ?? '').toLowerCase();
+                  if (status == 'resolved') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ResolvedIssueDetailScreen(
+                          issueData: data,
+                          docId: docId,
+                        ),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => IssueDetailScreen(
+                          issueData: data,
+                          docId: docId,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            category,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: 8.0,
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 180,
+                        child: leading,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  location,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (dateTime != null)
+                            Text(
+                              _getRelativeTime(dateTime),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: Row(
+                        children: [
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: upvoteLoading
+                                  ? null
+                                  : () => _toggleUpvote(docId),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isUpvoted
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      size: 22,
+                                      color: isUpvoted
+                                          ? const Color.fromARGB(255, 220, 95, 95)
+                                          : Colors.grey.shade600,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _engagementCountLabel(upvoteCount),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (upvoteLoading)
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.grey.shade400,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -642,447 +992,13 @@ class _IssuesScreenState extends State<IssuesScreen> {
           const SizedBox(height: 4),
           _buildFilterBar(),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('reports')
-                  .where(
-                    'status',
-                    isEqualTo: _showResolvedIssues ? 'resolved' : 'submitted',
-                  )
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                final docs = snapshot.data?.docs ?? [];
-                final filteredDocs = docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return _matchesFilters(data);
-                }).toList();
-
-                if (_sortByMostUpvoted) {
-                  filteredDocs.sort((a, b) {
-                    final dataA = a.data() as Map<String, dynamic>;
-                    final dataB = b.data() as Map<String, dynamic>;
-                    final upvotesA = (dataA['likesCount'] is int)
-                        ? dataA['likesCount'] as int
-                        : (dataA['likesCount'] as num?)?.toInt() ?? 0;
-                    final upvotesB = (dataB['likesCount'] is int)
-                        ? dataB['likesCount'] as int
-                        : (dataB['likesCount'] as num?)?.toInt() ?? 0;
-                    if (upvotesA != upvotesB) {
-                      return upvotesB.compareTo(upvotesA);
-                    }
-
-                    final timestampA = dataA['createdAt'];
-                    final timestampB = dataB['createdAt'];
-                    DateTime? dateA;
-                    DateTime? dateB;
-                    if (timestampA is Timestamp) dateA = timestampA.toDate();
-                    if (timestampB is Timestamp) dateB = timestampB.toDate();
-
-                    if (dateA != null && dateB != null) {
-                      return dateB.compareTo(dateA);
-                    }
-
-                    return 0;
-                  });
-                }
-
-                final currentUser = FirebaseAuth.instance.currentUser;
-
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _showResolvedIssues
-                                ? Icons.check_circle_outline
-                                : Icons.inbox,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _showResolvedIssues
-                                ? 'No resolved issues yet'
-                                : 'No active issues yet',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _showResolvedIssues
-                                ? 'Once reports are resolved they will appear here.'
-                                : 'Report an issue to get started.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return Column(
-                  children: [
-                    // // Results count
-                    // Container(
-                    //   width: double.infinity,
-                    //   padding: const EdgeInsets.symmetric(
-                    //     horizontal: 16,
-                    //     vertical: 8,
-                    //   ),
-                    //   color: Colors.white,
-                    //   child: Text(
-                    //     '${filteredDocs.length} issue${filteredDocs.length != 1 ? 's' : ''} found',
-                    //     style: TextStyle(
-                    //       fontSize: 13,
-                    //       color: Colors.grey.shade600,
-                    //       fontWeight: FontWeight.w500,
-                    //     ),
-                    //   ),
-                    // ),
-
-                    // Issues list
-                    Expanded(
-                      child: filteredDocs.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 32.0,
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.filter_alt_off,
-                                      size: 64,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No issues match your filters',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey.shade800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Try adjusting your filters',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(12),
-                              itemCount: filteredDocs.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final data =
-                                    filteredDocs[index].data()
-                                        as Map<String, dynamic>;
-                                final docId = filteredDocs[index].id;
-                                final upvoteCount = (data['likesCount'] is int)
-                                    ? data['likesCount'] as int
-                                    : (data['likesCount'] as num?)?.toInt() ??
-                                          0;
-                                final List<String> upvotedBy =
-                                    data['likedBy'] is Iterable
-                                    ? List<String>.from(
-                                        data['likedBy'] as Iterable,
-                                      )
-                                    : <String>[];
-                                final bool isUpvoted =
-                                    currentUser != null &&
-                                    upvotedBy.contains(currentUser.uid);
-                                final bool upvoteLoading = _upvoteInProgress
-                                    .contains(docId);
-                                final category =
-                                    data['category'] as String? ?? '';
-                                final description =
-                                    data['description'] as String? ?? '';
-                                final location =
-                                    data['exactLocation'] as String? ?? '';
-                                final timestamp = data['createdAt'];
-                                DateTime? dateTime;
-                                if (timestamp is Timestamp)
-                                  dateTime = timestamp.toDate();
-                                final imageBase64 =
-                                    data['imageBase64Thumbnail'] as String? ??
-                                    '';
-
-                                Widget leading;
-                                if (imageBase64.isNotEmpty) {
-                                  try {
-                                    final bytes = base64Decode(imageBase64);
-                                    leading = ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.memory(
-                                        bytes,
-                                        width: 100,
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    );
-                                  } catch (_) {
-                                    leading = Container(
-                                      width: 100,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade200,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.broken_image,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  leading = Container(
-                                    width: 100,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.image,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  );
-                                }
-
-                                return Card(
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: InkWell(
-                                    onTap: () {
-                                      final status =
-                                          (data['status'] as String? ?? '')
-                                              .toLowerCase();
-                                      if (status == 'resolved') {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                ResolvedIssueDetailScreen(
-                                                  issueData: data,
-                                                  docId: docId,
-                                                ),
-                                          ),
-                                        );
-                                      } else {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                IssueDetailScreen(
-                                                  issueData: data,
-                                                  docId: docId,
-                                                ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Category and Description
-                                        Padding(
-                                          padding: const EdgeInsets.all(12.0),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                category,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                description,
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey.shade700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12.0,
-                                            vertical: 8.0,
-                                          ),
-                                          child: SizedBox(
-                                            width: double.infinity,
-                                            height: 180,
-                                            child: leading,
-                                          ),
-                                        ),
-                                        // Location and Time
-                                        Padding(
-                                          padding: const EdgeInsets.all(12.0),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.location_on,
-                                                    size: 16,
-                                                    color: Colors.grey.shade600,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Expanded(
-                                                    child: Text(
-                                                      location,
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        color: Colors
-                                                            .grey
-                                                            .shade700,
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              if (dateTime != null)
-                                                Text(
-                                                  _getRelativeTime(dateTime),
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey.shade500,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                            12,
-                                            0,
-                                            12,
-                                            12,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Material(
-                                                color: Colors.transparent,
-                                                child: InkWell(
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                  onTap: upvoteLoading
-                                                      ? null
-                                                      : () =>
-                                                            _toggleUpvote(docId),
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(4),
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          isUpvoted
-                                                              ? Icons.favorite
-                                                              : Icons
-                                                                    .favorite_border,
-                                                          size: 22,
-                                                          color: isUpvoted
-                                                              ? const Color.fromARGB(
-                                                                  255,
-                                                                  220,
-                                                                  95,
-                                                                  95,
-                                                                )
-                                                              : Colors
-                                                                    .grey
-                                                                    .shade600,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 6,
-                                                        ),
-                                                        Text(
-                                                          _engagementCountLabel(
-                                                            upvoteCount,
-                                                          ),
-                                                          style: TextStyle(
-                                                            fontSize: 13,
-                                                            color: Colors
-                                                                .grey
-                                                                .shade700,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const Spacer(),
-                                              if (upvoteLoading)
-                                                SizedBox(
-                                                  width: 16,
-                                                  height: 16,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                          Color
-                                                        >(Colors.grey.shade400),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                );
-              },
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              children: [
+                _buildIssuesList(false), // Active Issues
+                _buildIssuesList(true),  // Resolved Issues
+              ],
             ),
           ),
         ],
