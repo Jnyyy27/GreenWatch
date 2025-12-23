@@ -3,36 +3,44 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import 'my_reports_screen.dart';
-import 'notification_screen.dart'; // Ensure notification_screen.dart exists in the same folder
+import 'notification_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  // The specific green from your Green Watch theme
-  final Color _primaryGreen = const Color.fromARGB(255, 114, 164, 117);
+  // Enhanced Color Palette based on Color(255, 76, 175, 80)
+  static const Color kPrimaryGreen = Color(0xFF4CAF50); // Main theme color
+  static const Color kPrimaryLight = Color(0xFF81C784); // Light green
+  static const Color kPrimaryDark = Color(0xFF388E3C); // Dark green
+  static const Color kAccentGreen = Color(0xFF66BB6A); // Accent
+  static const Color kBackgroundGray = Color(0xFFF8F9FA);
+  static const Color kCardWhite = Color(0xFFFFFFFF);
+  static const Color kTextPrimary = Color(0xFF1A1A1A);
+  static const Color kTextSecondary = Color(0xFF6B7280);
+  static const Color kBorderColor = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: kBackgroundGray,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Header Section (Green Background with User Info + Notification Bell)
+            // 1. Enhanced Header with User Info
             _buildHeader(context, user),
 
-            // 2. Stats Dashboard (Overlapping Card)
+            // 2. Stats Dashboard (Overlapping)
             Transform.translate(
-              offset: const Offset(0, -30),
+              offset: const Offset(0, -40),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildStatsCard(),
               ),
             ),
 
-            // 3. Menu Options (Account, Community, etc.)
+            // 3. Menu Options
             _buildMenuItems(context),
           ],
         ),
@@ -43,131 +51,350 @@ class ProfileScreen extends StatelessWidget {
   // --- Widget Builders ---
 
   Widget _buildHeader(BuildContext context, User? user) {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(top: 60, bottom: 50, left: 20, right: 20),
-          decoration: BoxDecoration(
-            color: _primaryGreen,
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
-            ),
-          ),
-          child: FutureBuilder<DocumentSnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('users')
-                .doc(user?.uid)
-                .get(),
-            builder: (context, snapshot) {
-              String displayName = "Loading...";
-              String displayEmail = user?.email ?? "";
-
-              if (snapshot.hasData && snapshot.data!.exists) {
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                displayName = data['name'] ?? "User";
-              } else if (snapshot.hasError) {
-                displayName = "User";
-              }
-
-              return Column(
-                children: [
-                  // Profile Avatar with Custom Image
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
-                    child: const CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.white,
-                      // Load the local asset image here
-                      backgroundImage: AssetImage('assets/images/greenwatch.png'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Welcome Text
-                  Text(
-                    "Welcome, $displayName",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    displayEmail,
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              );
-            },
-          ),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [kPrimaryGreen, kPrimaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        
-        // --- BELL ICON (Top Right) ---
-        Positioned(
-          top: 40, // Adjust for safe area
-          right: 16,
-          child: IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            tooltip: 'Notifications',
-            onPressed: () {
-              // Navigate to the Notification Screen
-              // FIX: Removed 'const' keyword here to prevent build error
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => NotificationScreen(),
+        boxShadow: [
+          BoxShadow(
+            color: kPrimaryGreen.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            // Decorative circles
+            Positioned(
+              top: -30,
+              right: -30,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.1),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+            Positioned(
+              bottom: 20,
+              left: -40,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.08),
+                ),
+              ),
+            ),
+            
+            // Main content
+            Column(
+              children: [
+                // Top bar with title and notification
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Profile',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: Stack(
+                            children: [
+                              const Icon(Icons.notifications_outlined, 
+                                color: Colors.white, 
+                                size: 24,
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          tooltip: 'Notifications',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NotificationScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // User Avatar and Info
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
+                  child: FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user?.uid)
+                        .get(),
+                    builder: (context, snapshot) {
+                      String displayName = "Loading...";
+                      String displayEmail = user?.email ?? "";
+
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final data = snapshot.data!.data() as Map<String, dynamic>;
+                        displayName = data['name'] ?? "User";
+                      } else if (snapshot.hasError) {
+                        displayName = "User";
+                      }
+
+                      return Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.white,
+                                  Colors.white.withOpacity(0.8),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: kCardWhite,
+                              ),
+                              child: const CircleAvatar(
+                                radius: 50,
+                                backgroundColor: kBackgroundGray,
+                                backgroundImage: AssetImage('assets/images/greenwatch.png'),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.email_outlined,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    displayEmail,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildStatsCard() {
-    // Note: In a real app, you would wrap this in a StreamBuilder to fetch real counts
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: kCardWhite,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: kBorderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
         children: [
-          _buildStatItem("Total", "0", Colors.black87),
-          _buildVerticalDivider(),
-          _buildStatItem("Pending", "0", Colors.orange),
-          _buildVerticalDivider(),
-          _buildStatItem("Resolved", "0", _primaryGreen),
+          Row(
+            children: [
+              Icon(
+                Icons.bar_chart_rounded,
+                color: kPrimaryGreen,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Report Statistics',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: kTextPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  "Total",
+                  "0",
+                  kPrimaryGreen,
+                  Icons.assignment_outlined,
+                ),
+              ),
+              Container(
+                height: 60,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      kBorderColor.withOpacity(0),
+                      kBorderColor,
+                      kBorderColor.withOpacity(0),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  "Pending",
+                  "0",
+                  Color(0xFFFB8C00),
+                  Icons.pending_outlined,
+                ),
+              ),
+              Container(
+                height: 60,
+                width: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      kBorderColor.withOpacity(0),
+                      kBorderColor,
+                      kBorderColor.withOpacity(0),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  "Resolved",
+                  "0",
+                  kAccentGreen,
+                  Icons.check_circle_outline,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String count, Color color) {
+  Widget _buildStatItem(String label, String count, Color color, IconData icon) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(height: 12),
         Text(
           count,
           style: TextStyle(
             fontSize: 24,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: color,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 4),
@@ -175,16 +402,12 @@ class ProfileScreen extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+            color: kTextSecondary,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
     );
-  }
-
-  Widget _buildVerticalDivider() {
-    return Container(height: 30, width: 1, color: Colors.grey[300]);
   }
 
   Widget _buildMenuItems(BuildContext context) {
@@ -193,20 +416,14 @@ class ProfileScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Account & Reports",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 10),
-
+          const SizedBox(height: 8),
+          _menuSectionTitle("Account & Reports"),
+          const SizedBox(height: 12),
           _buildMenuTile(
-            icon: Icons.history_edu,
+            icon: Icons.description_outlined,
             title: "My Reports",
-            subtitle: "Check status of submitted issues",
+            subtitle: "Track your submitted issues",
+            iconColor: kPrimaryGreen,
             onTap: () {
               Navigator.push(
                 context,
@@ -214,37 +431,41 @@ class ProfileScreen extends StatelessWidget {
               );
             },
           ),
-
-          const SizedBox(height: 20),
-          const Text(
-            "Community & Support",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 10),
-
+          
+          const SizedBox(height: 24),
+          _menuSectionTitle("Community & Support"),
+          const SizedBox(height: 12),
           _buildMenuTile(
             icon: Icons.menu_book_outlined,
             title: "User Guidelines",
-            subtitle: "How to use Green Watch",
+            subtitle: "Learn how to use Green Watch",
+            iconColor: kAccentGreen,
             onTap: () {
               _showGuidelines(context);
             },
           ),
-
-          const SizedBox(height: 20),
-
-          // LOGOUT BUTTON
+          
+          const SizedBox(height: 12),
           _buildMenuTile(
-            icon: Icons.logout,
+            icon: Icons.help_outline_rounded,
+            title: "Help & Support",
+            subtitle: "Get assistance with your account",
+            iconColor: Color(0xFF2196F3),
+            onTap: () {
+              // Add help functionality
+            },
+          ),
+          
+          const SizedBox(height: 24),
+          _menuSectionTitle("Settings"),
+          const SizedBox(height: 12),
+          _buildMenuTile(
+            icon: Icons.logout_rounded,
             title: "Logout",
             subtitle: "Sign out of your account",
+            iconColor: Color(0xFFEF5350),
             isDestructive: true,
             onTap: () async {
-              // Sign out and let main.dart handle the redirect to Login
               await AuthService().signOut();
             },
           ),
@@ -254,54 +475,107 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _menuSectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: kTextSecondary,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
   Widget _buildMenuTile({
     required IconData icon,
     required String title,
     required String subtitle,
+    required Color iconColor,
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        color: kCardWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDestructive 
+            ? Color(0xFFEF5350).withOpacity(0.2)
+            : kBorderColor,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 5,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: isDestructive
-                ? Colors.red[50]
-                : _primaryGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: iconColor.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: isDestructive ? Color(0xFFEF5350) : kTextPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: kTextSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: kTextSecondary.withOpacity(0.4),
+                ),
+              ],
+            ),
           ),
-          child: Icon(icon, color: isDestructive ? Colors.red : _primaryGreen),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDestructive ? Colors.red : Colors.black87,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey[400],
         ),
       ),
     );
@@ -310,51 +584,147 @@ class ProfileScreen extends StatelessWidget {
   void _showGuidelines(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
+        return Container(
+          decoration: BoxDecoration(
+            color: kCardWhite,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "User Guidelines",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _primaryGreen,
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: kBorderColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 16),
-              const ListTile(
-                leading: Icon(Icons.camera_alt),
-                title: Text("Take Clear Photos"),
-                subtitle: Text(
-                  "Ensure the issue is clearly visible for AI verification.",
+              Padding(
+                padding: const EdgeInsets.all(28.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: kPrimaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.menu_book_rounded,
+                            color: kPrimaryGreen,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          "User Guidelines",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: kTextPrimary,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildGuidelineItem(
+                      icon: Icons.camera_alt_outlined,
+                      title: "Take Clear Photos",
+                      description: "Ensure the issue is clearly visible for AI verification.",
+                      color: kPrimaryGreen,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildGuidelineItem(
+                      icon: Icons.location_on_outlined,
+                      title: "Check Location",
+                      description: "GPS tagging helps authorities locate issues quickly.",
+                      color: kAccentGreen,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildGuidelineItem(
+                      icon: Icons.category_outlined,
+                      title: "Select Category",
+                      description: "Choose the correct issue type (e.g., Pothole, Trash).",
+                      color: kPrimaryLight,
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
-              const ListTile(
-                leading: Icon(Icons.location_on),
-                title: Text("Check Location"),
-                subtitle: Text(
-                  "GPS tagging helps authorities find the issue fast.",
-                ),
-              ),
-              const ListTile(
-                leading: Icon(Icons.category),
-                title: Text("Select Category"),
-                subtitle: Text(
-                  "Choose the correct issue type (e.g., Pothole, Trash).",
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGuidelineItem({
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kBackgroundGray,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: kTextPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kTextSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
