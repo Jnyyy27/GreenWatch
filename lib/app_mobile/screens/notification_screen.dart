@@ -69,7 +69,6 @@ class NotificationScreen extends StatelessWidget {
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('announcements')
-              .orderBy('createdAt', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -81,10 +80,15 @@ class NotificationScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.red.shade400),
               );
             }
-            final announcements = snapshot.data?.docs
-                    .map((doc) => Announcement.fromFirestore(doc))
-                    .toList() ??
-                [];
+            final docs = snapshot.data?.docs ?? [];
+            final announcements = docs
+                .map((doc) => Announcement.fromFirestore(doc))
+                .toList();
+            announcements.sort((a, b) {
+              final aDate = a.createdAt ?? a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final bDate = b.createdAt ?? b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return bDate.compareTo(aDate);
+            });
             if (announcements.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
