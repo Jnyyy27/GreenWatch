@@ -26,10 +26,8 @@ class NotificationScreen extends StatelessWidget {
           ? const Center(child: Text("Please log in to see notifications"))
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('my_reports')
+                  .collection('reports')
                   .where('userId', isEqualTo: user.uid)
-                  // Assuming you have an 'updatedAt' field. If not, use 'createdAt'
-                  .orderBy('updatedAt', descending: true) 
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -61,12 +59,26 @@ class NotificationScreen extends StatelessWidget {
                   );
                 }
 
+                final docs = [...snapshot.data!.docs];
+                docs.sort((a, b) {
+                  final dataA = a.data() as Map<String, dynamic>;
+                  final dataB = b.data() as Map<String, dynamic>;
+                  final tsA = dataA['updatedAt'] ?? dataA['createdAt'];
+                  final tsB = dataB['updatedAt'] ?? dataB['createdAt'];
+                  DateTime? dtA;
+                  DateTime? dtB;
+                  if (tsA is Timestamp) dtA = tsA.toDate();
+                  if (tsB is Timestamp) dtB = tsB.toDate();
+                  if (dtA != null && dtB != null) return dtB.compareTo(dtA);
+                  return 0;
+                });
+
                 return ListView.separated(
                   padding: const EdgeInsets.all(12),
-                  itemCount: snapshot.data!.docs.length,
+                  itemCount: docs.length,
                   separatorBuilder: (ctx, i) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+                    final data = docs[index].data() as Map<String, dynamic>;
                     
                     // Extract data safely
                     final String status = data['status'] ?? 'Unknown';
