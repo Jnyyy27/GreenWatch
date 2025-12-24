@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'my_reports_screen.dart';
+import 'issues_screen.dart';
 import 'announcement_detail_screen.dart';
 import '../../services/announcement_model.dart';
 
@@ -210,22 +211,23 @@ class NotificationScreen extends StatelessWidget {
               children: docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final String status = data['status'] ?? 'Unknown';
+                final String statusLower = status.toLowerCase();
                 final String category = data['category'] ?? 'Report';
                 final String reportId = data['reportId'] ?? 'ID: ????';
 
                 Color statusColor = Colors.grey;
                 IconData statusIcon = Icons.info_outline;
 
-                if (status.toLowerCase() == 'resolved') {
+                if (statusLower == 'resolved') {
                   statusColor = Colors.green;
                   statusIcon = Icons.check_circle_outline;
-                } else if (status.toLowerCase().contains('pending')) {
+                } else if (statusLower.contains('pending')) {
                   statusColor = Colors.orange;
                   statusIcon = Icons.access_time;
-                } else if (status.toLowerCase().contains('progress')) {
+                } else if (statusLower.contains('progress')) {
                   statusColor = Colors.blue;
                   statusIcon = Icons.build;
-                } else if (status.toLowerCase().contains('viewed')) {
+                } else if (statusLower.contains('viewed')) {
                   statusColor = Colors.purple;
                   statusIcon = Icons.visibility;
                 }
@@ -274,12 +276,21 @@ class NotificationScreen extends StatelessWidget {
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ReportDetailScreen(data: data),
-                        ),
-                      );
+                      if (statusLower == 'resolved') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const IssuesScreen(startResolved: true),
+                          ),
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ReportDetailScreen(data: data),
+                          ),
+                        );
+                      }
                     },
                   ),
                 );

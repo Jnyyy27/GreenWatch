@@ -36,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
               offset: const Offset(0, -40),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildStatsCard(),
+                child: _buildStatsSection(user),
               ),
             ),
 
@@ -269,7 +269,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsCard() {
+  Widget _buildStatsCard({
+    required int totalCount,
+    required int inProgressCount,
+    required int resolvedCount,
+    required bool isLoading,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -311,7 +316,7 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: _buildStatItem(
                   "Total",
-                  "0",
+                  isLoading ? "..." : totalCount.toString(),
                   kPrimaryGreen,
                   Icons.assignment_outlined,
                 ),
@@ -334,8 +339,8 @@ class ProfileScreen extends StatelessWidget {
               ),
               Expanded(
                 child: _buildStatItem(
-                  "Pending",
-                  "0",
+                  "inProgress",
+                  isLoading ? "..." : inProgressCount.toString(),
                   Color(0xFFFB8C00),
                   Icons.pending_outlined,
                 ),
@@ -359,7 +364,7 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: _buildStatItem(
                   "Resolved",
-                  "0",
+                  isLoading ? "..." : resolvedCount.toString(),
                   kAccentGreen,
                   Icons.check_circle_outline,
                 ),
@@ -410,6 +415,51 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildStatsSection(User? user) {
+    if (user == null) {
+      return _buildStatsCard(
+        totalCount: 0,
+        inProgressCount: 0,
+        resolvedCount: 0,
+        isLoading: false,
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .where('userId', isEqualTo: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        int total = 0;
+        int inProgress = 0;
+        int resolved = 0;
+
+        if (snapshot.hasData) {
+          total = snapshot.data!.docs.length;
+          for (final doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status'] as String? ?? '').toLowerCase();
+            if (status == 'resolved') {
+              resolved += 1;
+            } else {
+              // Treat all non-resolved statuses as inProgress/in progress buckets
+              inProgress += 1;
+            }
+          }
+        }
+
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        return _buildStatsCard(
+          totalCount: total,
+          inProgressCount: inProgress,
+          resolvedCount: resolved,
+          isLoading: isLoading,
+        );
+      },
+    );
+  }
+
   Widget _buildMenuItems(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -433,7 +483,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           
           const SizedBox(height: 24),
-          _menuSectionTitle("Community & Support"),
+          _menuSectionTitle("Support"),
           const SizedBox(height: 12),
           _buildMenuTile(
             icon: Icons.menu_book_outlined,
@@ -444,18 +494,6 @@ class ProfileScreen extends StatelessWidget {
               _showGuidelines(context);
             },
           ),
-          
-          const SizedBox(height: 12),
-          _buildMenuTile(
-            icon: Icons.help_outline_rounded,
-            title: "Help & Support",
-            subtitle: "Get assistance with your account",
-            iconColor: Color(0xFF2196F3),
-            onTap: () {
-              // Add help functionality
-            },
-          ),
-          
           const SizedBox(height: 24),
           _menuSectionTitle("Settings"),
           const SizedBox(height: 12),
@@ -639,24 +677,31 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     _buildGuidelineItem(
-                      icon: Icons.camera_alt_outlined,
-                      title: "Take Clear Photos",
-                      description: "Ensure the issue is clearly visible for AI verification.",
-                      color: kPrimaryGreen,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildGuidelineItem(
-                      icon: Icons.location_on_outlined,
-                      title: "Check Location",
-                      description: "GPS tagging helps authorities locate issues quickly.",
+                      icon: Icons.category_outlined,
+                      title: "Pick Issue Category",
+                      description: "Choose the right issue type so it reaches the correct department.",
                       color: kAccentGreen,
                     ),
                     const SizedBox(height: 16),
                     _buildGuidelineItem(
-                      icon: Icons.category_outlined,
-                      title: "Select Category",
-                      description: "Choose the correct issue type (e.g., Pothole, Trash).",
+                      icon: Icons.location_on_outlined,
+                      title: "Pin Location",
+                      description: "Use GPS if you are there; use Search Map if reporting another spot.",
+                      color: kPrimaryGreen,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildGuidelineItem(
+                      icon: Icons.camera_alt_outlined,
+                      title: "Add Details and a Photo",
+                      description: "Short description plus one clear photo (required) before submitting.",
                       color: kPrimaryLight,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildGuidelineItem(
+                      icon: Icons.notifications_active_outlined,
+                      title: "Submit and Track",
+                      description: "Submit, then watch status updates. You’ll get notified when authorities update it.",
+                      color: kPrimaryDark,
                     ),
                     const SizedBox(height: 24),
                   ],
