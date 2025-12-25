@@ -1,11 +1,16 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 import 'my_reports_screen.dart';
 import 'notification_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   // Enhanced Color Palette based on Color(255, 76, 175, 80)
@@ -18,6 +23,180 @@ class ProfileScreen extends StatelessWidget {
   static const Color kTextPrimary = Color(0xFF1A1A1A);
   static const Color kTextSecondary = Color(0xFF6B7280);
   static const Color kBorderColor = Color(0xFFE5E7EB);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final ImagePicker _picker = ImagePicker();
+
+  String? _localName;
+  Uint8List? _localAvatarBytes;
+  bool _loadingLocal = true;
+
+  Color get kPrimaryGreen => ProfileScreen.kPrimaryGreen;
+  Color get kPrimaryLight => ProfileScreen.kPrimaryLight;
+  Color get kPrimaryDark => ProfileScreen.kPrimaryDark;
+  Color get kAccentGreen => ProfileScreen.kAccentGreen;
+  Color get kBackgroundGray => ProfileScreen.kBackgroundGray;
+  Color get kCardWhite => ProfileScreen.kCardWhite;
+  Color get kTextPrimary => ProfileScreen.kTextPrimary;
+  Color get kTextSecondary => ProfileScreen.kTextSecondary;
+  Color get kBorderColor => ProfileScreen.kBorderColor;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocalProfile();
+  }
+
+  Future<void> _loadLocalProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _loadingLocal = false;
+      });
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedName = prefs.getString('profile_name_${user.uid}');
+    final savedPhoto = prefs.getString('profile_photo_${user.uid}');
+    Uint8List? photoBytes;
+    if (savedPhoto != null) {
+      try {
+        photoBytes = base64Decode(savedPhoto);
+      } catch (_) {
+        photoBytes = null;
+      }
+    }
+
+    setState(() {
+      _localName = savedName;
+      _localAvatarBytes = photoBytes;
+      _loadingLocal = false;
+    });
+  }
+
+  Future<void> _updateLocalName(String name) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_name_${user.uid}', name);
+    setState(() {
+      _localName = name;
+    });
+  }
+
+  Future<void> _pickNewPhoto() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_photo_${user.uid}', base64Encode(bytes));
+
+    setState(() {
+      _localAvatarBytes = bytes;
+    });
+  }
+
+  void _showPhotoOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.visibility_outlined),
+                title: const Text('View photo'),
+                enabled: _localAvatarBytes != null,
+                onTap: _localAvatarBytes == null
+                    ? null
+                    : () {
+                        Navigator.pop(ctx);
+                        _viewCurrentPhoto();
+                      },
+              ),
+              ListTile(
+                leading: const Icon(Icons.upload_outlined),
+                title: const Text('Upload new photo'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _pickNewPhoto();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _viewCurrentPhoto() {
+    if (_localAvatarBytes == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: InteractiveViewer(
+              child: Image.memory(
+                _localAvatarBytes!,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _promptEditName(String currentName) async {
+    final controller = TextEditingController(text: currentName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Edit name'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (newName != null && newName.isNotEmpty) {
+      await _updateLocalName(newName);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +215,7 @@ class ProfileScreen extends StatelessWidget {
               offset: const Offset(0, -40),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildStatsCard(),
+                child: _buildStatsSection(user),
               ),
             ),
 
@@ -164,64 +343,127 @@ class ProfileScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
                   child: FutureBuilder<DocumentSnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user?.uid)
-                        .get(),
+                    future: user == null
+                        ? null
+                        : FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .get(),
                     builder: (context, snapshot) {
-                      String displayName = "Loading...";
-                      String displayEmail = user?.email ?? "";
-
+                      final displayEmail = user?.email ?? "";
+                      String fetchedName = "User";
                       if (snapshot.hasData && snapshot.data!.exists) {
                         final data = snapshot.data!.data() as Map<String, dynamic>;
-                        displayName = data['name'] ?? "User";
-                      } else if (snapshot.hasError) {
-                        displayName = "User";
+                        fetchedName = (data['name'] as String?)?.trim().isNotEmpty == true
+                            ? data['name']
+                            : "User";
                       }
+
+                      String resolvedName = _localName ?? fetchedName;
+                      if (_localName == null &&
+                          user != null &&
+                          snapshot.connectionState == ConnectionState.waiting) {
+                        resolvedName = "Loading...";
+                      }
+
+                      final avatarProvider = _localAvatarBytes != null
+                          ? MemoryImage(_localAvatarBytes!)
+                          : const AssetImage('assets/images/greenwatch.png') as ImageProvider;
 
                       return Column(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.white,
-                                  Colors.white.withOpacity(0.8),
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
+                          SizedBox(
+                            width: 116,
+                            height: 116,
+                            child: Stack(
+                              children: [
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.white,
+                                          Colors.white.withOpacity(0.8),
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: kCardWhite,
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 50,
+                                        backgroundColor: kBackgroundGray,
+                                        backgroundImage: avatarProvider,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 4,
+                                  right: 4,
+                                  child: Material(
+                                    color: kPrimaryGreen,
+                                    shape: const CircleBorder(),
+                                    elevation: 4,
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: user == null
+                                          ? null
+                                          : () => _showPhotoOptions(context),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(8),
+                                        child: Icon(
+                                          Icons.edit,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: kCardWhite,
-                              ),
-                              child: const CircleAvatar(
-                                radius: 50,
-                                backgroundColor: kBackgroundGray,
-                                backgroundImage: AssetImage('assets/images/greenwatch.png'),
-                              ),
-                            ),
                           ),
                           const SizedBox(height: 20),
-                          Text(
-                            displayName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.5,
-                            ),
-                            textAlign: TextAlign.center,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  resolvedName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              if (user != null) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                                  tooltip: 'Edit name',
+                                  onPressed: () => _promptEditName(resolvedName),
+                                ),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Container(
@@ -269,7 +511,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsCard() {
+  Widget _buildStatsCard({
+    required int totalCount,
+    required int inProgressCount,
+    required int resolvedCount,
+    required bool isLoading,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -311,7 +558,7 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: _buildStatItem(
                   "Total",
-                  "0",
+                  isLoading ? "..." : totalCount.toString(),
                   kPrimaryGreen,
                   Icons.assignment_outlined,
                 ),
@@ -334,8 +581,8 @@ class ProfileScreen extends StatelessWidget {
               ),
               Expanded(
                 child: _buildStatItem(
-                  "Pending",
-                  "0",
+                  "inProgress",
+                  isLoading ? "..." : inProgressCount.toString(),
                   Color(0xFFFB8C00),
                   Icons.pending_outlined,
                 ),
@@ -359,7 +606,7 @@ class ProfileScreen extends StatelessWidget {
               Expanded(
                 child: _buildStatItem(
                   "Resolved",
-                  "0",
+                  isLoading ? "..." : resolvedCount.toString(),
                   kAccentGreen,
                   Icons.check_circle_outline,
                 ),
@@ -410,6 +657,51 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildStatsSection(User? user) {
+    if (user == null) {
+      return _buildStatsCard(
+        totalCount: 0,
+        inProgressCount: 0,
+        resolvedCount: 0,
+        isLoading: false,
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .where('userId', isEqualTo: user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        int total = 0;
+        int inProgress = 0;
+        int resolved = 0;
+
+        if (snapshot.hasData) {
+          total = snapshot.data!.docs.length;
+          for (final doc in snapshot.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status'] as String? ?? '').toLowerCase();
+            if (status == 'resolved') {
+              resolved += 1;
+            } else {
+              // Treat all non-resolved statuses as inProgress/in progress buckets
+              inProgress += 1;
+            }
+          }
+        }
+
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        return _buildStatsCard(
+          totalCount: total,
+          inProgressCount: inProgress,
+          resolvedCount: resolved,
+          isLoading: isLoading,
+        );
+      },
+    );
+  }
+
   Widget _buildMenuItems(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -433,7 +725,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           
           const SizedBox(height: 24),
-          _menuSectionTitle("Community & Support"),
+          _menuSectionTitle("Support"),
           const SizedBox(height: 12),
           _buildMenuTile(
             icon: Icons.menu_book_outlined,
@@ -444,18 +736,6 @@ class ProfileScreen extends StatelessWidget {
               _showGuidelines(context);
             },
           ),
-          
-          const SizedBox(height: 12),
-          _buildMenuTile(
-            icon: Icons.help_outline_rounded,
-            title: "Help & Support",
-            subtitle: "Get assistance with your account",
-            iconColor: Color(0xFF2196F3),
-            onTap: () {
-              // Add help functionality
-            },
-          ),
-          
           const SizedBox(height: 24),
           _menuSectionTitle("Settings"),
           const SizedBox(height: 12),
@@ -639,24 +919,31 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     _buildGuidelineItem(
-                      icon: Icons.camera_alt_outlined,
-                      title: "Take Clear Photos",
-                      description: "Ensure the issue is clearly visible for AI verification.",
-                      color: kPrimaryGreen,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildGuidelineItem(
-                      icon: Icons.location_on_outlined,
-                      title: "Check Location",
-                      description: "GPS tagging helps authorities locate issues quickly.",
+                      icon: Icons.category_outlined,
+                      title: "Pick Issue Category",
+                      description: "Choose the right issue type so it reaches the correct department.",
                       color: kAccentGreen,
                     ),
                     const SizedBox(height: 16),
                     _buildGuidelineItem(
-                      icon: Icons.category_outlined,
-                      title: "Select Category",
-                      description: "Choose the correct issue type (e.g., Pothole, Trash).",
+                      icon: Icons.location_on_outlined,
+                      title: "Pin Location",
+                      description: "Use GPS if you are there; use Search Map if reporting another spot.",
+                      color: kPrimaryGreen,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildGuidelineItem(
+                      icon: Icons.camera_alt_outlined,
+                      title: "Add Details and a Photo",
+                      description: "Short description plus one clear photo (required) before submitting.",
                       color: kPrimaryLight,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildGuidelineItem(
+                      icon: Icons.notifications_active_outlined,
+                      title: "Submit and Track",
+                      description: "Submit, then watch status updates. You’ll get notified when authorities update it.",
+                      color: kPrimaryDark,
                     ),
                     const SizedBox(height: 24),
                   ],

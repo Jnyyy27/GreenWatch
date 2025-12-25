@@ -8,7 +8,9 @@ import 'package:green_watch/app_mobile/screens/resolved_issue_detail_screen.dart
 import 'package:green_watch/services/report_service.dart';
 
 class IssuesScreen extends StatefulWidget {
-  const IssuesScreen({super.key});
+  final bool startResolved;
+
+  const IssuesScreen({super.key, this.startResolved = false});
 
   @override
   State<IssuesScreen> createState() => _IssuesScreenState();
@@ -22,7 +24,14 @@ class _IssuesScreenState extends State<IssuesScreen> {
   final Set<String> _upvoteInProgress = {};
   bool _showResolvedIssues = false;
   bool _sortByMostUpvoted = false;
-  final PageController _pageController = PageController(initialPage: 0);
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _showResolvedIssues = widget.startResolved;
+    _pageController = PageController(initialPage: widget.startResolved ? 1 : 0);
+  }
 
   String get _engagementAction =>
       _showResolvedIssues ? 'like' : 'upvote';
