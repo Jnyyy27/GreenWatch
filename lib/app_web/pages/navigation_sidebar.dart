@@ -44,8 +44,8 @@ class NavigationSidebar extends StatelessWidget {
     final navItems = [
       ('Dashboard', Icons.home, 0),
       ('Report Queue', Icons.assignment, 1),
-      ('Announcements', Icons.notifications, 2),
       ('History', Icons.history, 3),
+      ('Announcements', Icons.notifications, 2),
       ('Analytics', Icons.analytics, 4),
     ];
 
@@ -68,21 +68,6 @@ class NavigationSidebar extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                // Placeholder for department logo/image
-                // Container(
-                //   width: 48,
-                //   height: 48,
-                //   decoration: BoxDecoration(
-                //     color: const Color(0xFFF5F5F5),
-                //     borderRadius: BorderRadius.circular(12),
-                //     border: Border.all(color: Colors.grey.shade300, width: 1),
-                //   ),
-                //   // child: Icon(
-                //   //   Icons.apartment,
-                //   //   color: Colors.grey.shade400,
-                //   //   size: 24,
-                //   // ),
-                // ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

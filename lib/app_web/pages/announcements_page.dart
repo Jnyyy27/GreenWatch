@@ -1101,15 +1101,38 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                     announcement.imageBase64!,
                                   );
                                 },
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: 280,
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 280,
+                                  decoration: BoxDecoration(
                                     color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color:
+                                          Colors.grey.shade400, // border color
+                                      width: 2, // border width
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
                                     child: Image.memory(
                                       base64Decode(announcement.imageBase64!),
                                       fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(
+                                          Icons.broken_image,
+                                          size: 40,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),

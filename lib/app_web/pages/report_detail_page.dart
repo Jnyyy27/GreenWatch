@@ -17,6 +17,7 @@ class ReportDetailModal extends StatefulWidget {
 }
 
 class _ReportDetailModalState extends State<ReportDetailModal> {
+  late String _currentFirestoreStatus;
   late String _selectedStatus;
   List<TimelineEntry> _timeline = [];
   List<String> _resolutionProofs = [];
@@ -29,9 +30,35 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
     'Resolved',
   ];
 
+  final List<String> _statusFlow = [
+    'Submitted',
+    'Viewed',
+    'In Progress',
+    'Resolved',
+  ];
+
+  List<String> _getAllowedStatuses([String? status]) {
+    final currentStatus = status ?? _currentFirestoreStatus;
+    final index = _statusFlow.indexOf(currentStatus);
+    if (index == -1) return [];
+    return _statusFlow.sublist(index);
+  }
+  // List<String> _getAllowedStatuses([String? status]) {
+  //   final currentStatus = status ?? _currentFirestoreStatus;
+  //   final statusFlow = ['Submitted', 'Viewed', 'In Progress', 'Resolved'];
+  //   final index = statusFlow.indexOf(
+  //     _currentFirestoreStatus,
+  //   ); // Compare with Firestore
+  //   if (index == -1) return [];
+  //   return statusFlow.sublist(index);
+  // }
+
   @override
   void initState() {
     super.initState();
+    _currentFirestoreStatus = _normalizeStatus(
+      widget.report.status,
+    ); // initialize
     _selectedStatus = _normalizeStatus(widget.report.status);
     if (!_statusOptions.contains(_selectedStatus))
       _selectedStatus = 'Submitted';
@@ -61,7 +88,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
             'action': 'Submitted',
             'timestamp': widget.report.createdAt,
             'user': 'System',
-            'notes': 'Report submitted detail',
+            'notes': 'Report submitted',
             'images': [],
           });
         }
@@ -167,11 +194,31 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
           .collection('reports')
           .doc(widget.report.reportId);
       final reportSnap = await reportRef.get();
-      setState(() => _selectedStatus = _normalizeStatus(reportSnap['status']));
+      final normalizedStatus = _normalizeStatus(reportSnap['status']);
+      setState(() {
+        _selectedStatus = normalizedStatus;
+        _currentFirestoreStatus =
+            normalizedStatus; // Save current Firestore status
+      });
     } catch (e) {
-      setState(() => _selectedStatus = _normalizeStatus(widget.report.status));
+      setState(() {
+        _selectedStatus = _normalizeStatus(widget.report.status);
+        _currentFirestoreStatus = _selectedStatus;
+      });
     }
   }
+
+  // Future<void> _loadLatestStatus() async {
+  //   try {
+  //     final reportRef = FirebaseFirestore.instance
+  //         .collection('reports')
+  //         .doc(widget.report.reportId);
+  //     final reportSnap = await reportRef.get();
+  //     setState(() => _selectedStatus = _normalizeStatus(reportSnap['status']));
+  //   } catch (e) {
+  //     setState(() => _selectedStatus = _normalizeStatus(widget.report.status));
+  //   }
+  // }
 
   Future<void> _updateReport() async {
     try {
@@ -180,6 +227,17 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
           .doc(widget.report.reportId);
       final reportSnap = await reportRef.get();
       final normalizedCurrent = _normalizeStatus(reportSnap['status']);
+      final allowedStatuses = _getAllowedStatuses(normalizedCurrent);
+
+      if (!allowedStatuses.contains(_selectedStatus)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid status transition'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
       if (normalizedCurrent == _selectedStatus) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -203,6 +261,31 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
               borderRadius: BorderRadius.circular(12),
             ),
             duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      } else if (_selectedStatus == 'Resolved' && _resolutionProofs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Please upload at least one resolution proof image when marking as Resolved.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
           ),
         );
         return;
@@ -883,6 +966,8 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                 ),
               ),
               const SizedBox(height: 12),
+
+              /// ✅ FIXED DROPDOWN
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   filled: true,
@@ -907,29 +992,32 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                     vertical: 14,
                   ),
                 ),
-                value: _statusOptions.contains(_selectedStatus)
+
+                value: _getAllowedStatuses().contains(_selectedStatus)
                     ? _selectedStatus
-                    : _statusOptions.first,
-                items: _statusOptions
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _getStatusIcon(s),
-                              size: 18,
-                              color: _getStatusColor(s),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(s, style: const TextStyle(fontSize: 14)),
-                          ],
+                    : _getAllowedStatuses().first,
+                items: _getAllowedStatuses().map((s) {
+                  return DropdownMenuItem(
+                    value: s,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getStatusIcon(s),
+                          size: 18,
+                          color: _getStatusColor(s),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _selectedStatus = v ?? _selectedStatus),
+                        const SizedBox(width: 10),
+                        Text(s, style: const TextStyle(fontSize: 14)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _selectedStatus = v);
+                  }
+                },
               ),
               const SizedBox(height: 20),
               Text(

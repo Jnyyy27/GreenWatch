@@ -21,6 +21,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   Set<String> _selectedCategories = {};
   DateTime? _startDate;
   DateTime? _endDate;
+  String _sortBy = 'newest'; // Add this: 'newest', 'oldest', or 'most_liked'
 
   final Map<String, List<String>> _departmentCategories = {
     'MBPP': [
@@ -60,7 +61,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   }
 
   List<Report> _filterReports(List<Report> reports) {
-    return reports.where((report) {
+    var filtered = reports.where((report) {
       final matchesSearch =
           _searchQuery.isEmpty ||
           report.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -86,12 +87,23 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
 
       return matchesSearch && matchesStatus && matchesCategory && matchesDate;
     }).toList();
+
+    // Apply sorting
+    if (_sortBy == 'most_liked') {
+      filtered.sort((a, b) => b.likesCount.compareTo(a.likesCount));
+    } else if (_sortBy == 'oldest') {
+      filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    } else {
+      // 'newest' is default
+      filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+
+    return filtered;
   }
 
   String _normalizeStatus(String status) {
     final normalizedStatus = status.toLowerCase().trim();
     final statusMap = {
-      'Submitted': 'Submitted',
       'submitted': 'Submitted',
       'viewed': 'Viewed',
       'in progress': 'In Progress',
@@ -107,11 +119,13 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
         departmentCategories: _departmentCategories[widget.department] ?? [],
         startDate: _startDate,
         endDate: _endDate,
-        onApply: (categories, startDate, endDate) {
+        sortBy: _sortBy,
+        onApply: (categories, startDate, endDate, sortBy) {
           setState(() {
             _selectedCategories = categories;
             _startDate = startDate;
             _endDate = endDate;
+            _sortBy = sortBy;
           });
           Navigator.pop(context);
         },
@@ -163,6 +177,17 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
         ],
       ),
     );
+  }
+
+  String _getSortLabel() {
+    switch (_sortBy) {
+      case 'oldest':
+        return 'Oldest First';
+      case 'most_liked':
+        return 'Most Upvoted';
+      default:
+        return 'Newest First';
+    }
   }
 
   @override
@@ -342,7 +367,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
-                                      '${(_selectedCategories.length + (_startDate != null ? 1 : 0) + (_endDate != null ? 1 : 0))}',
+                                      '${(_selectedCategories.length + (_startDate != null ? 1 : 0) + (_endDate != null ? 1 : 0) + (_sortBy != 'newest' ? 1 : 0))}',
                                       style: const TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
@@ -362,7 +387,8 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                 // Active Filters Chips (if any)
                 if (_selectedCategories.isNotEmpty ||
                     _startDate != null ||
-                    _endDate != null)
+                    _endDate != null ||
+                    _sortBy != 'newest')
                   Container(
                     margin: const EdgeInsets.only(top: 12),
                     child: Wrap(
@@ -392,6 +418,16 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                               });
                             },
                           ),
+                        // Sort chip
+                        if (_sortBy != 'newest')
+                          _buildFilterChip(
+                            label: _getSortLabel(),
+                            onDelete: () {
+                              setState(() {
+                                _sortBy = 'newest';
+                              });
+                            },
+                          ),
                         // Clear all button
                         InkWell(
                           onTap: () {
@@ -399,6 +435,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                               _selectedCategories.clear();
                               _startDate = null;
                               _endDate = null;
+                              _sortBy = 'newest';
                             });
                           },
                           child: Container(
@@ -439,7 +476,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                         .where('department', isEqualTo: widget.department)
                         .where(
                           'status',
-                          whereIn: ['submitted', 'viewed', 'in progress'],
+                          whereIn: ['Submitted', 'Viewed', 'In Progress'],
                         )
                         .orderBy('createdAt', descending: true)
                         .snapshots(),
@@ -633,9 +670,32 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(
-                'Reported: ${_formatDate(report.createdAt)}',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Reported: ${_formatDate(report.createdAt)}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.thumb_up,
+                        size: 12,
+                        color: Colors.amber.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${report.likesCount}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -936,24 +996,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
     );
   }
 
-  // Widget _buildDetailRow(String label, String value) {
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Text(
-  //         label,
-  //         style: TextStyle(
-  //           fontSize: 12,
-  //           fontWeight: FontWeight.w600,
-  //           color: Colors.grey.shade600,
-  //         ),
-  //       ),
-  //       const SizedBox(height: 4),
-  //       Text(value, style: const TextStyle(fontSize: 13)),
-  //     ],
-  //   );
-  // }
-
   Widget _buildStatusBadge(String status) {
     final statusColors = {
       'Submitted': Color(0xFFFFF3E0),
@@ -1008,13 +1050,15 @@ class _FilterDialog extends StatefulWidget {
   final List<String> departmentCategories;
   final DateTime? startDate;
   final DateTime? endDate;
-  final Function(Set<String>, DateTime?, DateTime?) onApply;
+  final String sortBy;
+  final Function(Set<String>, DateTime?, DateTime?, String) onApply;
 
   const _FilterDialog({
     required this.selectedCategories,
     required this.departmentCategories,
     required this.startDate,
     required this.endDate,
+    required this.sortBy,
     required this.onApply,
   });
 
@@ -1026,6 +1070,7 @@ class _FilterDialogState extends State<_FilterDialog> {
   late Set<String> _tempCategories;
   late DateTime? _tempStartDate;
   late DateTime? _tempEndDate;
+  late String _tempSortBy;
 
   @override
   void initState() {
@@ -1033,6 +1078,7 @@ class _FilterDialogState extends State<_FilterDialog> {
     _tempCategories = Set.from(widget.selectedCategories);
     _tempStartDate = widget.startDate;
     _tempEndDate = widget.endDate;
+    _tempSortBy = widget.sortBy;
   }
 
   @override
@@ -1120,6 +1166,40 @@ class _FilterDialogState extends State<_FilterDialog> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            // Sort By Filter
+            Text('Sort By', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            RadioListTile<String>(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Newest First', style: TextStyle(fontSize: 14)),
+              value: 'newest',
+              groupValue: _tempSortBy,
+              onChanged: (value) {
+                setState(() => _tempSortBy = value ?? 'newest');
+              },
+            ),
+            RadioListTile<String>(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Oldest First', style: TextStyle(fontSize: 14)),
+              value: 'oldest',
+              groupValue: _tempSortBy,
+              onChanged: (value) {
+                setState(() => _tempSortBy = value ?? 'oldest');
+              },
+            ),
+            RadioListTile<String>(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Most Upvoted', style: TextStyle(fontSize: 14)),
+              value: 'most_liked',
+              groupValue: _tempSortBy,
+              onChanged: (value) {
+                setState(() => _tempSortBy = value ?? 'most_liked');
+              },
+            ),
           ],
         ),
       ),
@@ -1134,13 +1214,19 @@ class _FilterDialogState extends State<_FilterDialog> {
               _tempCategories.clear();
               _tempStartDate = null;
               _tempEndDate = null;
+              _tempSortBy = 'newest';
             });
           },
           child: const Text('Reset'),
         ),
         ElevatedButton(
           onPressed: () {
-            widget.onApply(_tempCategories, _tempStartDate, _tempEndDate);
+            widget.onApply(
+              _tempCategories,
+              _tempStartDate,
+              _tempEndDate,
+              _tempSortBy,
+            );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green.shade700,

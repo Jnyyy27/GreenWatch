@@ -31,8 +31,8 @@ class _HomePageState extends State<HomePage> {
     _pages = [
       DashboardPage(department: _departmentCode),
       ReportQueuePage(department: _departmentCode),
-      AnnouncementsPage(department: _departmentCode),
       HistoryPage(department: _departmentCode),
+      AnnouncementsPage(department: _departmentCode),
       AnalyticsPage(department: _departmentCode),
     ];
   }

@@ -96,10 +96,20 @@ class DashboardPage extends StatelessWidget {
               .where((r) => r.status.toLowerCase() == 'submitted')
               .toList();
 
-          final totalReports = reports.length;
+          final totalReports = reports
+              .where((r) => r.status.toLowerCase() != 'unsuccessful')
+              .length;
 
           final inProgressReports = reports
               .where((r) => r.status.toLowerCase() == 'in progress')
+              .toList();
+
+          final unresolvedReports = reports
+              .where(
+                (r) =>
+                    r.status.toLowerCase() != 'resolved' &&
+                    r.status.toLowerCase() != 'unsuccessful',
+              )
               .toList();
 
           final resolvedReports = reports
@@ -131,6 +141,19 @@ class DashboardPage extends StatelessWidget {
                 ..sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
           final top5Unresolved = top5OldUnresolved.take(5).toList();
 
+          // top5upvoted reports
+          final top5UpvotedReports =
+              reports
+                  .where(
+                    (r) =>
+                        r.status.toLowerCase() != 'resolved' &&
+                        r.status.toLowerCase() != 'unsuccessful' &&
+                        r.likesCount >= 0,
+                  )
+                  .toList()
+                ..sort((a, b) => a.likesCount.compareTo(b.likesCount));
+          final top5Upvoted = top5UpvotedReports.take(5).toList();
+
           return SingleChildScrollView(
             child: Column(
               children: [
@@ -146,13 +169,13 @@ class DashboardPage extends StatelessWidget {
                       // CRITICAL: This dictates the minimum width of the cards.
                       // 280.0 ensures that on mobile (width < 560), only 1 column shows.
                       // On wider screens, 2, 3, 4, or 5 columns will show.
-                      maxCrossAxisExtent: 280.0,
+                      maxCrossAxisExtent: 230.0,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                       childAspectRatio:
                           2.8, // Adjusted ratio for better vertical spacing
                     ),
-                    itemCount: 5, // Total number of KPIs
+                    itemCount: 6, // Total number of KPIs
                     itemBuilder: (context, index) {
                       // Use a list to hold your KPI data
                       final kpiData = [
@@ -173,6 +196,12 @@ class DashboardPage extends StatelessWidget {
                           'count': inProgressReports.length,
                           'color': Colors.amber.shade700,
                           'icon': Icons.pending_actions,
+                        },
+                        {
+                          'title': 'Unresolved',
+                          'count': unresolvedReports.length,
+                          'color': const Color.fromARGB(255, 251, 0, 209),
+                          'icon': Icons.warning_amber_rounded,
                         },
                         {
                           'title': 'Resolved',
@@ -228,6 +257,17 @@ class DashboardPage extends StatelessWidget {
                         Colors.red,
                         Icons.warning_amber_rounded,
                       ),
+                      const SizedBox(height: 24),
+
+                      // Top 5 Unresolved >1 week
+                      _buildTop5Section(
+                        'Public Attention',
+                        'Most upvoted unresolved reports',
+                        top5Upvoted,
+                        context,
+                        const Color.fromARGB(255, 235, 54, 244),
+                        Icons.thumb_up,
+                      ),
                     ],
                   ),
                 ),
@@ -270,7 +310,7 @@ class DashboardPage extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 28),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             // Number and title in same line, close together /
             Row(
               children: [

@@ -12,6 +12,7 @@ class Report {
   final double longitude;
   final String status;
   final DateTime updatedAt;
+  final int likesCount;
 
   Report({
     required this.reportId,
@@ -25,6 +26,7 @@ class Report {
     required this.longitude,
     required this.status,
     required this.updatedAt,
+    required this.likesCount,
   });
 
   factory Report.fromFirestore(DocumentSnapshot doc) {
@@ -41,6 +43,7 @@ class Report {
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
       status: data['status'] ?? '',
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      likesCount: data['likesCount'] ?? 0,
     );
   }
 }
