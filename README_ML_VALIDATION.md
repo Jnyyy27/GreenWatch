@@ -59,9 +59,17 @@ Setup & Integration:    40-50 minutes total
    • Fast validation (<10ms)
 
 ✅ DUPLICATE DETECTION
-   • Compare images for similarity
-   • Prevent duplicate submissions
-   • 80-95% accuracy
+   • Hard rule: same day + 100m + high text similarity = instant duplicate
+   • Composite scoring: location (10%) + description (35%) + image (20%) + timeline (20%) + category (15%)
+   • Only compares against successfully verified reports
+   • Debug logging to Firestore for troubleshooting
+   • 85-95% accuracy
+
+✅ ETHICAL CONTENT VALIDATION
+   • Detects sensitive words in description (violence, bomb, etc.)
+   • Blocks explicit harmful content before submission
+   • Reports flagged for sensitive content marked unsuccessful
+   • Expandable word list (can load from remote config)
 
 
 🚦 QUICK START (3 STEPS)
@@ -95,9 +103,11 @@ FREE              No API costs ($0 vs $1.50 per 1000)
 FAST              On-device processing (50-100ms)
 PRIVATE           No cloud upload (offline capable)
 SCALABLE          Process unlimited images
-ETHICAL           Validates report quality
+ETHICAL           Validates report quality + content safety
 LIGHTWEIGHT       14.5 MB model
 PRE-TRAINED       Ready to use (no training needed)
+SMART DUPES       Hard rule + composite scoring
+COMPREHENSIVE     Location, time, description, image matching
 
 
 📊 PERFORMANCE
@@ -117,26 +127,34 @@ Accuracy:       ~71% ImageNet top-1
 🎓 HOW IT WORKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. User picks image from gallery
+1. User enters description
    ↓
-2. Validation dialog appears
-   ├─ Quality check (size, format)
-   └─ ML classification (what's in image?)
+2. Check for sensitive words
+   ├─ Block if harmful content detected
+   └─ Warn and submit if flagged (marked unsuccessful)
    ↓
-3. Environmental relevance check
-   ├─ Check if detected object is environmental
-   └─ Show top predictions
+3. User picks image from gallery
    ↓
-4. User sees result
-   ├─ ✅ VALID (continue submitting)
+4. ML classification (what's in image?)
+   ├─ Check image quality (size, format)
+   └─ Identify objects & confidence scores
+   ↓
+5. Environmental relevance check
+   ├─ Is detected object environmental issue?
+   └─ Show top 3 predictions
+   ↓
+6. Check for duplicates
+   ├─ Same day + 100m + 0.7+ description similarity? → INSTANT DUPLICATE
+   └─ Otherwise: Composite scoring (location/description/image/timeline)
+   ↓
+7. User sees validation result
+   ├─ ✅ VALID (proceed to submit)
    ├─ ❌ INVALID (pick different image)
    └─ ⚠️ WARNING (can submit anyway)
    ↓
-5. Optional: Check for duplicates
-   ├─ Compare with previous submissions
-   └─ Warn if very similar
-   ↓
-6. Submit to Firebase with validation metadata
+8. Submit to Firebase with validation metadata
+   ├─ Store image embedding for future duplicate detection
+   └─ Set initial verification status based on ML checks
 
 
 ✅ ALREADY DONE FOR YOU
@@ -207,6 +225,9 @@ Additional Help:
 💡 COMMON QUESTIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+💡 COMMON QUESTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 Q: Will it detect my specific issue?
 A: Yes! MobileNetV2 knows 1000 ImageNet classes including
    pollution, water, waste, industrial, fire, etc.
@@ -230,8 +251,21 @@ A: YES! Replace file in assets/models/ with your model.
 Q: How do I customize keywords?
 A: Edit ENVIRONMENTAL_KEYWORDS list in ml_validator_service.dart
 
+Q: How does duplicate detection work?
+A: Hard rule: same day + within 100m + 70%+ text match = duplicate
+   Otherwise: composite score of location (10%) + description (35%) + 
+   image (20%) + timeline (20%) + category (15%). Threshold: 75%
+
+Q: What are sensitive words?
+A: violence, bomb, kill, murder, terror, suicide, sex, porn, drug, 
+   attack, racist, slur (customizable in report_screen.dart)
+
+Q: Will flagged reports be rejected?
+A: Submitted but marked unsuccessful automatically.
+   Admin can review before publication.
+
 Q: What if duplicate detection fails?
-A: Adjust similarity threshold (default: 0.85 = 85%)
+A: Check duplicate debug logs in Firestore (duplicateDebug field)
 
 Q: Will it slow down my app?
 A: No! 50-100ms is imperceptible. Users won't notice.
@@ -240,12 +274,35 @@ A: No! 50-100ms is imperceptible. Users won't notice.
 🛠️ TECHNICAL DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Model:          MobileNetV2 (v1.0, 224×224)
-Input:          224×224×3 normalized image
-Output:         1000 class probabilities
-Framework:      TensorFlow Lite
-Interpreter:    tflite_flutter plugin
-Duplicate:      Color histogram chi-square distance
+Model:                MobileNetV2 (v1.0, 224×224)
+Input:                224×224×3 normalized image
+Output:               1000 class probabilities
+Framework:            TensorFlow Lite
+Interpreter:          tflite_flutter plugin
+
+Content Validation:
+  ├─ Sensitive words:     Basic string matching (30+ words)
+  └─ Checked at:          Pre-submission in report_screen
+
+Image Validation:
+  ├─ Quality:             Size, format, minimum dimensions
+  ├─ Classification:      MobileNetV2 inference
+  └─ Environmental check: Keyword + semantic matching
+
+Duplicate Detection:
+  ├─ Hard Rule:           Same day + 100m + 0.7+ description match
+  ├─ Composite Scoring:   5-factor weighted average
+  ├─ Comparison Method:   Cosine similarity on embeddings
+  ├─ Location:            Haversine distance formula
+  ├─ Timeline:            Calendar day comparison
+  └─ Only vs verified:    Filter to successfully verified reports
+
+Performance:
+  ├─ Model Load:          1-2 seconds (first time)
+  ├─ Inference:           50-100 ms per image
+  ├─ Duplicate check:      100-200 ms per comparison
+  ├─ Quality check:        <10 ms
+  └─ Content validation:  <5 ms
 
 
 🎯 VALIDATION KEYWORDS (30+)

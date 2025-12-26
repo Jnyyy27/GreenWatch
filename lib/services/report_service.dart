@@ -313,10 +313,10 @@ class ReportService {
     }
   }
 
-  /// Run ML-based verification and duplicate detection for a saved report.
-  /// Uses hybrid strategy: confidence-based inference + semantic matching + user description verification
-  /// Duplicate scoring based on: category match, location, description similarity, image similarity, and timeline
-  /// Returns a map with verification details and updates the report document with results.
+  // Run ML-based verification and duplicate detection for a saved report.
+  // Uses hybrid strategy: confidence-based inference + semantic matching + user description verification
+  // Duplicate scoring based on: category match, location, description similarity, image similarity, and timeline
+  // Returns a map with verification details and updates the report document with results.
   Future<Map<String, dynamic>> verifyReport({
     required String reportId,
     String? imagePath,
@@ -344,7 +344,7 @@ class ReportService {
       // If flagged sensitive, mark unsuccessful immediately
       if (flaggedSensitive) {
         verification['reason'] = 'Flagged sensitive content in description';
-        verification['status'] = 'unsuccessful';
+        verification['status'] = 'Unsuccessful';
         await _firestore.collection('reports').doc(reportId).update({
           'verificationStatus': verification['status'],
           'verificationReason': verification['reason'],
@@ -383,7 +383,7 @@ class ReportService {
       if (!validationResult.isValid) {
         verification['reason'] =
             'Image does not match selected category. ${validationResult.topPrediction?.label ?? 'unknown'}';
-        verification['status'] = 'unsuccessful';
+        verification['status'] = 'Unsuccessful';
       }
 
       // Run enhanced duplicate check with scoring system
@@ -402,10 +402,14 @@ class ReportService {
 
       // Persist near-miss comparison debug info to Firestore for troubleshooting
       try {
-        final List<dynamic>? comps = (dupResult['comparisons'] as List<dynamic>?);
+        final List<dynamic>? comps =
+            (dupResult['comparisons'] as List<dynamic>?);
         if (comps != null && comps.isNotEmpty) {
           // Filter near-miss comparisons (just below threshold) and also keep the top matches
-          final double nearMissFloor = (similarityThreshold - 0.15).clamp(0.0, 1.0);
+          final double nearMissFloor = (similarityThreshold - 0.15).clamp(
+            0.0,
+            1.0,
+          );
           final nearMisses = comps
               .where((c) => (c['compositeScore'] as double) >= nearMissFloor)
               .toList();
@@ -428,7 +432,7 @@ class ReportService {
         verification['reason'] =
             'Duplicate report found (Thank you for helping to keep reports unique)';
         verification['status'] = 'unsuccessful';
-      }                                                                                                                                                                                                                                                                                                                                                                                         
+      }
 
       // If ML validation passed and not duplicate -> submitted
       if (validationResult.isValid && !dupResult['isDuplicate']) {
@@ -472,9 +476,9 @@ class ReportService {
     }
   }
 
-  /// Enhanced duplicate detection with composite scoring
-  /// Scores based on: category match, location proximity, description similarity, image similarity, timeline
-  /// Returns: {score: 0.0-1.0, isDuplicate: bool}
+  // Enhanced duplicate detection with composite scoring
+  // Scores based on: category match, location proximity, description similarity, image similarity, timeline
+  // Returns: {score: 0.0-1.0, isDuplicate: bool}
   Future<Map<String, dynamic>> _checkDuplicatesWithScoring({
     required String imagePath,
     required String category,
@@ -560,10 +564,16 @@ class ReportService {
 
           // === HARD DUPLICATE RULE ===
           // If same day + within 100m + high description similarity > 0.7, mark as duplicate immediately
-          final double distanceKm = _calculateDistance(latitude, longitude, reportLat, reportLng);
+          final double distanceKm = _calculateDistance(
+            latitude,
+            longitude,
+            reportLat,
+            reportLng,
+          );
           final double distanceMeters = distanceKm * 1000;
           final timestamp = docData['createdAt'] as Timestamp?;
-          final bool sameDay = timestamp != null && _isSameDayOrToday(timestamp.toDate());
+          final bool sameDay =
+              timestamp != null && _isSameDayOrToday(timestamp.toDate());
 
           if (sameDay && distanceMeters <= 100.0 && descriptionScore > 0.7) {
             print(
@@ -577,8 +587,9 @@ class ReportService {
                   'comparedReportId': reportId,
                   'compositeScore': 1.0,
                   'hardDuplicateRule': true,
-                  'reason': 'Same day + within 100m + high description similarity',
-                }
+                  'reason':
+                      'Same day + within 100m + high description similarity',
+                },
               ],
             };
           }
@@ -602,29 +613,29 @@ class ReportService {
           // Timeline score: based on age (within 2 weeks = higher score)
           final double timelineScore = _calculateTimelineScore(docData);
 
-            // Composite score: weighted average
-            // Weights updated to reduce location importance and increase description weight
-            // Weights: category (15%), location (10%), description (35%), image (20%), timeline (20%)
-            final double compositeScore =
+          // Composite score: weighted average
+          // Weights updated to reduce location importance and increase description weight
+          // Weights: category (15%), location (10%), description (35%), image (20%), timeline (20%)
+          final double compositeScore =
               (categoryScore * 0.15) +
               (locationScore * 0.10) +
               (descriptionScore * 0.35) +
               (imageSimilarity * 0.20) +
               (timelineScore * 0.20);
 
-            // Record comparison details for debugging / near-miss logging
-            comparisons.add({
-              'comparedReportId': reportId,
-              'compositeScore': compositeScore,
-              'categoryScore': categoryScore,
-              'locationScore': locationScore,
-              'descriptionScore': descriptionScore,
-              'imageSimilarity': imageSimilarity,
-              'timelineScore': timelineScore,
-              'reportLatitude': reportLat,
-              'reportLongitude': reportLng,
-              'createdAt': docData['createdAt'],
-            });
+          // Record comparison details for debugging / near-miss logging
+          comparisons.add({
+            'comparedReportId': reportId,
+            'compositeScore': compositeScore,
+            'categoryScore': categoryScore,
+            'locationScore': locationScore,
+            'descriptionScore': descriptionScore,
+            'imageSimilarity': imageSimilarity,
+            'timelineScore': timelineScore,
+            'reportLatitude': reportLat,
+            'reportLongitude': reportLng,
+            'createdAt': docData['createdAt'],
+          });
 
           print(
             '📊 Report $reportId - Category: ${(categoryScore * 100).toStringAsFixed(1)}%, '
@@ -667,7 +678,7 @@ class ReportService {
     }
   }
 
-  /// Check if a date is the same day as today (calendar day, not 24 hours)
+  // Check if a date is the same day as today (calendar day, not 24 hours)
   bool _isSameDayOrToday(DateTime date) {
     final now = DateTime.now();
     return date.year == now.year &&
@@ -675,8 +686,8 @@ class ReportService {
         date.day == now.day;
   }
 
-  /// Calculate location proximity score (0-1, closer = higher)
-  /// 0km = 1.0, 5km+ = 0.0, linear interpolation between
+  // Calculate location proximity score (0-1, closer = higher)
+  // 100m or less = 1.0, 30m = 1.0, 50m = 0.8, 100m = 0.5, beyond 100m = 0.0
   double _calculateLocationScore(
     double lat1,
     double lng1,
@@ -692,7 +703,7 @@ class ReportService {
     return 0.0;
   }
 
-  /// Calculate distance between two coordinates in kilometers (Haversine formula)
+  // Calculate distance between two coordinates in kilometers (Haversine formula)
   double _calculateDistance(
     double lat1,
     double lng1,
@@ -719,8 +730,8 @@ class ReportService {
     return degrees * pi / 180;
   }
 
-  /// Calculate description text similarity (0-1)
-  /// Uses token overlap and keyword matching
+  // Calculate description text similarity (0-1)
+  // Uses token overlap and keyword matching
   double _calculateDescriptionSimilarity(String desc1, String desc2) {
     if (desc1.isEmpty && desc2.isEmpty) return 1.0;
     if (desc1.isEmpty || desc2.isEmpty) return 0.0;
@@ -738,29 +749,28 @@ class ReportService {
     return intersection / union; // Jaccard similarity
   }
 
-  /// Within 2 weeks = 1.0, decreases linearly beyond 2 weeks
-  /// Calculate timeline similarity score (0–1)
-double _calculateTimelineScore(Map<String, dynamic> docData) {
-  try {
-    final timestamp = docData['createdAt'] as Timestamp?;
-    if (timestamp == null) return 0.0;
+  // Within 2 weeks = 1.0, decreases linearly beyond 2 weeks
+  // Calculate timeline similarity score (0–1)
+  double _calculateTimelineScore(Map<String, dynamic> docData) {
+    try {
+      final timestamp = docData['createdAt'] as Timestamp?;
+      if (timestamp == null) return 0.0;
 
-    final reportDate = timestamp.toDate();
-    final now = DateTime.now();
-    final daysDifference = now.difference(reportDate).inDays;
+      final reportDate = timestamp.toDate();
+      final now = DateTime.now();
+      final daysDifference = now.difference(reportDate).inDays;
 
-    if (daysDifference <= 0) return 1.0;      // Same day
-    if (daysDifference <= 3) return 0.8;      // Within 3 days
-    if (daysDifference <= 7) return 0.4;      // Within a week
-    return 0.0;                               // Older than 7 days
-  } catch (e) {
-    print('⚠️ Error calculating timeline score: $e');
-    return 0.0;
+      if (daysDifference <= 0) return 1.0; // Same day
+      if (daysDifference <= 3) return 0.8; // Within 3 days
+      if (daysDifference <= 7) return 0.4; // Within a week
+      return 0.0; // Older than 7 days
+    } catch (e) {
+      print('⚠️ Error calculating timeline score: $e');
+      return 0.0;
+    }
   }
-}
 
-
-  /// Calculate cosine similarity between two vectors (0-1)
+  // Calculate cosine similarity between two vectors (0-1)
   double _cosineSimilarity(List<double> vec1, List<double> vec2) {
     if (vec1.isEmpty || vec2.isEmpty) return 0.0;
     if (vec1.length != vec2.length) return 0.0;
@@ -783,7 +793,7 @@ double _calculateTimelineScore(Map<String, dynamic> docData) {
     return dotProduct / (magnitude1 * magnitude2);
   }
 
-  /// Find nearby reports with extended radius
+  // Find nearby reports with extended radius
   Future<List<QueryDocumentSnapshot>> _findNearbyReportsExtended(
     String category,
     double lat,

@@ -5,7 +5,6 @@ import 'package:geocoding/geocoding.dart';
 import 'dart:io';
 import '../../services/report_service.dart';
 import '../../services/ml_validator_service.dart';
-import '../../widgets/report_validation_helper.dart';
 import 'map_search_screen.dart';
 
 class ReportScreenWithMLValidation extends StatefulWidget {
@@ -27,18 +26,24 @@ class _ReportScreenWithMLValidationState
   // Basic sensitive words list for ethical/content validation.
   // Expand this list as policy requirements evolve or load from remote config.
   final Set<String> _sensitiveWords = {
-    'violence',
-    'bomb',
-    'kill',
-    'murder',
-    'terror',
-    'suicide',
-    'sex',
-    'porn',
-    'drug',
-    'attack',
-    'racist',
-    'slur',
+    'stupid',
+    'idiot',
+    'dumb',
+    'fool',
+    'useless',
+    'trash',
+    'garbage',
+    'pathetic',
+    'lazy',
+    'incompetent',
+    'hate',
+    'hell',
+    'damn',
+    'shut up',
+    'blame',
+    'worst',
+    'irresponsible',
+    'negligent',
   };
 
   String? _selectedCategory;
@@ -81,7 +86,9 @@ class _ReportScreenWithMLValidationState
         description: _descriptionController.text,
       );
 
-      final combined = '${validation.message ?? ''} ${validation.topPrediction?.label ?? ''}'.toLowerCase();
+      final combined =
+          '${validation.message ?? ''} ${validation.topPrediction?.label ?? ''}'
+              .toLowerCase();
       return _findSensitiveWords(combined);
     } catch (e) {
       // If ML service fails, we conservatively return no matches so submission can continue,
@@ -763,7 +770,10 @@ class _ReportScreenWithMLValidationState
             'The attached image appears to contain content flagged by the model: $joined. Please choose a different image or edit the report.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
           ],
         ),
       );

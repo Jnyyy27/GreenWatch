@@ -606,8 +606,15 @@ class MLValidatorService {
             // Calculate geographic distance to be conservative (km)
             double docLat = (docData['latitude'] as num?)?.toDouble() ?? 0.0;
             double docLng = (docData['longitude'] as num?)?.toDouble() ?? 0.0;
-            final double distKm = _distanceKm(latitude, longitude, docLat, docLng);
-            print('📍 Distance to report ${doc.id}: ${ (distKm * 1000).toStringAsFixed(1) } meters');
+            final double distKm = _distanceKm(
+              latitude,
+              longitude,
+              docLat,
+              docLng,
+            );
+            print(
+              '📍 Distance to report ${doc.id}: ${(distKm * 1000).toStringAsFixed(1)} meters',
+            );
 
             // Calculate cosine similarity
             final similarity = _cosineSimilarity(newEmbedding, oldEmbedding);
@@ -618,7 +625,7 @@ class MLValidatorService {
             // Only consider as duplicate if both similarity and proximity checks pass
             if (distKm <= 0.05 && similarity >= similarityThreshold) {
               print(
-                '⚠️  DUPLICATE DETECTED: ${(similarity * 100).toStringAsFixed(2)}% similar to report ${doc.id} at ${(distKm*1000).toStringAsFixed(1)}m',
+                '⚠️  DUPLICATE DETECTED: ${(similarity * 100).toStringAsFixed(2)}% similar to report ${doc.id} at ${(distKm * 1000).toStringAsFixed(1)}m',
               );
               return DuplicateDetectionResult(
                 isDuplicate: true,
@@ -749,9 +756,12 @@ double _distanceKm(double lat1, double lng1, double lat2, double lng2) {
   const double earthRadiusKm = 6371.0;
   final double dLat = (lat2 - lat1) * pi / 180.0;
   final double dLng = (lng2 - lng1) * pi / 180.0;
-  final double a = sin(dLat / 2) * sin(dLat / 2) +
-      cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
-          sin(dLng / 2) * sin(dLng / 2);
+  final double a =
+      sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1 * pi / 180.0) *
+          cos(lat2 * pi / 180.0) *
+          sin(dLng / 2) *
+          sin(dLng / 2);
   final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
   return earthRadiusKm * c;
 }
