@@ -24,6 +24,23 @@ class _ReportScreenWithMLValidationState
   final ReportService _reportService = ReportService();
   late MLValidatorService _mlValidator;
 
+  // Basic sensitive words list for ethical/content validation.
+  // Expand this list as policy requirements evolve or load from remote config.
+  final Set<String> _sensitiveWords = {
+    'violence',
+    'bomb',
+    'kill',
+    'murder',
+    'terror',
+    'suicide',
+    'sex',
+    'porn',
+    'drug',
+    'attack',
+    'racist',
+    'slur',
+  };
+
   String? _selectedCategory;
   String _department = '';
   File? _selectedImage;
@@ -31,6 +48,7 @@ class _ReportScreenWithMLValidationState
   double? _longitude;
   bool _isSubmitting = false;
   bool _isLoadingLocation = false;
+  ValidationResult? _lastValidationResult;
 
   final List<String> _categories = [
     'Public equipment problem',
@@ -46,6 +64,31 @@ class _ReportScreenWithMLValidationState
   void initState() {
     super.initState();
     _mlValidator = MLValidatorService();
+  }
+
+  List<String> _findSensitiveWords(String text) {
+    if (text.trim().isEmpty) return <String>[];
+    final lower = text.toLowerCase();
+    return _sensitiveWords.where((w) => lower.contains(w)).toList();
+  }
+
+  Future<List<String>> _checkImageSensitiveWords() async {
+    if (_selectedImage == null) return <String>[];
+    try {
+      final validation = await _mlValidator.validateImage(
+        _selectedImage!.path,
+        category: _selectedCategory ?? 'unknown',
+        description: _descriptionController.text,
+      );
+
+      final combined = '${validation.message ?? ''} ${validation.topPrediction?.label ?? ''}'.toLowerCase();
+      return _findSensitiveWords(combined);
+    } catch (e) {
+      // If ML service fails, we conservatively return no matches so submission can continue,
+      // but we log the error for debugging.
+      print('Error during image sensitive-word check: $e');
+      return <String>[];
+    }
   }
 
   @override
@@ -196,6 +239,8 @@ class _ReportScreenWithMLValidationState
       setState(() {
         _selectedImage = File(image.path);
       });
+
+      _showSnackBar('Image selected! ✅', Colors.green, Icons.check_circle);
     }
   }
 
@@ -693,6 +738,38 @@ class _ReportScreenWithMLValidationState
       return;
     }
 
+    // --- Ethical/content validation: check description for sensitive words ---
+    final descMatches = _findSensitiveWords(_descriptionController.text);
+    final bool flaggedSensitive = descMatches.isNotEmpty;
+    if (flaggedSensitive) {
+      final String joined = descMatches.join(', ');
+      // Inform the user that the report will be submitted but marked unsuccessful
+      _showSnackBar(
+        'Description contains sensitive words ($joined). Report will be submitted but marked unsuccessful.',
+        Colors.orange,
+        Icons.warning_amber_rounded,
+      );
+    }
+
+    // --- Check image content using ML predictions for sensitive words ---
+    final imageMatches = await _checkImageSensitiveWords();
+    if (imageMatches.isNotEmpty) {
+      final String joined = imageMatches.join(', ');
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Image Content Flagged'),
+          content: Text(
+            'The attached image appears to contain content flagged by the model: $joined. Please choose a different image or edit the report.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
@@ -706,11 +783,20 @@ class _ReportScreenWithMLValidationState
             latitude: _latitude!,
             longitude: _longitude!,
             imageFile: _selectedImage,
+            flaggedSensitive: flaggedSensitive,
           );
 
       final String reportId = submitResult['reportId'] as String;
       final Map<String, dynamic>? verification =
           submitResult['verification'] as Map<String, dynamic>?;
+
+      // ==================== ML VALIDATION AFTER SUBMISSION ====================
+      // Validate based on: image confidence > 0.6 and description match
+      final validationResult = await _mlValidator.validateImage(
+        _selectedImage!.path,
+        category: _selectedCategory ?? 'unknown',
+        description: _descriptionController.text,
+      );
 
       // Show immediate verification feedback if available
       if (mounted && verification != null) {
@@ -721,7 +807,7 @@ class _ReportScreenWithMLValidationState
           context: context,
           builder: (ctx) => AlertDialog(
             title: Text(
-              vStatus == 'submitted'
+              vStatus == 'Submitted'
                   ? 'Report Submitted'
                   : 'Verification Result',
             ),
@@ -762,7 +848,13 @@ class _ReportScreenWithMLValidationState
                 ),
                 const SizedBox(height: 8),
                 Text('Report ID: $reportId'),
-                const Text('Status: Pending Verification'),
+                if (validationResult.isValid)
+                  Text(
+                    'Detected: ${validationResult.topPrediction?.label ?? 'Unknown'}',
+                  ),
+                Text(
+                  'Status: ${verification != null ? verification['status'] : 'pending verification'}',
+                ),
               ],
             ),
             backgroundColor: Colors.green,
@@ -784,6 +876,7 @@ class _ReportScreenWithMLValidationState
           _selectedImage = null;
           _latitude = null;
           _longitude = null;
+          _lastValidationResult = null;
         });
       }
     } catch (e) {

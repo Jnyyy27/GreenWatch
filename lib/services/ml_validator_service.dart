@@ -148,10 +148,10 @@ class MLValidatorService {
     }
   }
 
-  /// Validates an image for environmental issue relevance using hybrid strategy:
-  /// 1. Confidence-based inference (≥0.6)
-  /// 2. Semantic keyword matching for infrastructure/damage patterns
-  /// 3. User description verification (keyword matching against damage descriptions)
+  // Validates an image for environmental issue relevance using hybrid strategy:
+  // 1. Confidence-based inference (≥0.6) accepted
+  // 2. Semantic keyword matching for infrastructure/damage patterns
+  // 3. User description verification (keyword matching against damage descriptions)
   Future<ValidationResult> validateImage(
     String imagePath, {
     double confidenceThreshold = 0.3,
@@ -226,7 +226,7 @@ class MLValidatorService {
         descriptionValidates = _matchesDescriptionSemantics(description);
         if (descriptionValidates) {
           print(
-            '✅ Description verification: user provided description confirms infrastructure issue',
+            '✅ Description verification: User provided description confirms infrastructure issue',
           );
         }
       }
@@ -274,10 +274,10 @@ class MLValidatorService {
     }
   }
 
-  /// Check if the detected object/scene is valid based on hybrid strategy:
-  /// 1. High confidence (≥0.6) always accepted
-  /// 2. Semantic keyword matching for category-specific infrastructure
-  /// 3. Damage/deterioration patterns catch partially visible damaged objects
+  // Check if the detected object/scene is valid based on hybrid strategy:
+  // 1. High confidence (≥0.6) always accepted
+  // 2. Semantic keyword matching for category-specific infrastructure
+  // 3. Damage/deterioration patterns catch partially visible damaged objects
   bool _isEnvironmentalIssue(String label, double confidence, String category) {
     final lowerLabel = label.toLowerCase();
 
@@ -390,8 +390,8 @@ class MLValidatorService {
     return damagePatterns.any((pattern) => label.contains(pattern));
   }
 
-  /// Check if user's description contains keywords indicating environmental damage/issues
-  /// This provides a third validation pillar: user-provided description verification
+  // Check if user's description contains keywords indicating environmental damage/issues
+  // This provides a third validation pillar: user-provided description verification
   bool _matchesDescriptionSemantics(String description) {
     final lowerDescription = description.toLowerCase();
 
@@ -452,13 +452,13 @@ class MLValidatorService {
     return false;
   }
 
-  /// Get confidence threshold for a specific category
-  /// Using unified 0.6 confidence threshold across all categories
+  // Get confidence threshold for a specific category
+  // Using unified 0.6 confidence threshold across all categories
   double _getConfidenceThresholdForCategory(String category) {
     return 0.6; // Unified threshold for all categories
   }
 
-  /// Get top-k predictions with labels (filtering out very low confidence predictions)
+  // Get top-k predictions with labels (filtering out very low confidence predictions)
   List<ImageClassification> _getTopPredictions(
     List<double> predictions,
     int k,
@@ -509,8 +509,8 @@ class MLValidatorService {
     return input;
   }
 
-  /// Extract image embedding using the neural network
-  /// Returns a feature vector representation of the image
+  // Extract image embedding using the neural network
+  // Returns a feature vector representation of the image
   Future<List<double>> getImageEmbedding(String imagePath) async {
     try {
       if (!_modelsLoaded) {
@@ -547,7 +547,7 @@ class MLValidatorService {
     }
   }
 
-  /// Check for duplicate reports using image similarity and location proximity
+  // Check for duplicate reports using image similarity and location proximity
   Future<DuplicateDetectionResult> checkForDuplicates({
     required String imagePath,
     required String category,
@@ -603,26 +603,32 @@ class MLValidatorService {
               '🔎 Comparing with report ${doc.id}, embedding length: ${oldEmbedding.length}',
             );
 
+            // Calculate geographic distance to be conservative (km)
+            double docLat = (docData['latitude'] as num?)?.toDouble() ?? 0.0;
+            double docLng = (docData['longitude'] as num?)?.toDouble() ?? 0.0;
+            final double distKm = _distanceKm(latitude, longitude, docLat, docLng);
+            print('📍 Distance to report ${doc.id}: ${ (distKm * 1000).toStringAsFixed(1) } meters');
+
             // Calculate cosine similarity
             final similarity = _cosineSimilarity(newEmbedding, oldEmbedding);
             print(
               '📊 Similarity with report ${doc.id}: ${(similarity * 100).toStringAsFixed(2)}%',
             );
 
-            if (similarity > maxSimilarity) {
-              maxSimilarity = similarity;
-              mostSimilarReportId = doc.id;
-            }
-
-            // If above threshold, it's a duplicate
-            if (similarity >= similarityThreshold) {
+            // Only consider as duplicate if both similarity and proximity checks pass
+            if (distKm <= 0.05 && similarity >= similarityThreshold) {
               print(
-                '⚠️  DUPLICATE DETECTED: ${(similarity * 100).toStringAsFixed(2)}% similar to report $mostSimilarReportId',
+                '⚠️  DUPLICATE DETECTED: ${(similarity * 100).toStringAsFixed(2)}% similar to report ${doc.id} at ${(distKm*1000).toStringAsFixed(1)}m',
               );
               return DuplicateDetectionResult(
                 isDuplicate: true,
                 similarity: similarity,
               );
+            }
+
+            if (similarity > maxSimilarity) {
+              maxSimilarity = similarity;
+              mostSimilarReportId = doc.id;
             }
           }
         } catch (e) {
@@ -719,6 +725,9 @@ class MLValidatorService {
 }
 
 double _cosineSimilarity(List<double> a, List<double> b) {
+  if (a.isEmpty || b.isEmpty) return 0.0;
+  if (a.length != b.length) return 0.0;
+
   double dot = 0.0;
   double normA = 0.0;
   double normB = 0.0;
@@ -729,5 +738,20 @@ double _cosineSimilarity(List<double> a, List<double> b) {
     normB += b[i] * b[i];
   }
 
-  return dot / (sqrt(normA) * sqrt(normB));
+  final double magA = sqrt(normA);
+  final double magB = sqrt(normB);
+  if (magA == 0.0 || magB == 0.0) return 0.0;
+
+  return (dot / (magA * magB)).clamp(-1.0, 1.0);
+}
+
+double _distanceKm(double lat1, double lng1, double lat2, double lng2) {
+  const double earthRadiusKm = 6371.0;
+  final double dLat = (lat2 - lat1) * pi / 180.0;
+  final double dLng = (lng2 - lng1) * pi / 180.0;
+  final double a = sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1 * pi / 180.0) * cos(lat2 * pi / 180.0) *
+          sin(dLng / 2) * sin(dLng / 2);
+  final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  return earthRadiusKm * c;
 }
