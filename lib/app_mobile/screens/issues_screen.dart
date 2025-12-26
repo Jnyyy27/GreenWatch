@@ -16,6 +16,8 @@ class IssuesScreen extends StatefulWidget {
   State<IssuesScreen> createState() => _IssuesScreenState();
 }
 
+enum _SortOption { mostUpvoted, newest }
+
 class _IssuesScreenState extends State<IssuesScreen> {
   String? _selectedCategory;
   String _areaSearchQuery = '';
@@ -35,9 +37,6 @@ class _IssuesScreenState extends State<IssuesScreen> {
 
   String get _engagementAction =>
       _showResolvedIssues ? 'like' : 'upvote';
-
-  String get _sortButtonLabel =>
-      _showResolvedIssues ? 'Most Liked' : 'Most Upvoted';
 
   String get _sortChipLabel =>
       _showResolvedIssues ? 'Most liked' : 'Most upvoted';
@@ -415,16 +414,28 @@ class _IssuesScreenState extends State<IssuesScreen> {
                       ? const Color.fromARGB(255, 96, 156, 101)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  child: InkWell(
-                    onTap: () {
+                  child: PopupMenuButton<_SortOption>(
+                    tooltip: 'Sort',
+                    onSelected: (value) {
                       setState(() {
-                        _sortByMostUpvoted = !_sortByMostUpvoted;
+                        _sortByMostUpvoted = value == _SortOption.mostUpvoted;
                       });
                     },
-                    borderRadius: BorderRadius.circular(10),
+                    itemBuilder: (context) => [
+                      CheckedPopupMenuItem(
+                        value: _SortOption.mostUpvoted,
+                        checked: _sortByMostUpvoted,
+                        child: Text(_sortChipLabel),
+                      ),
+                      CheckedPopupMenuItem(
+                        value: _SortOption.newest,
+                        checked: !_sortByMostUpvoted,
+                        child: const Text('Newest'),
+                      ),
+                    ],
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
+                        horizontal: 12,
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
@@ -435,28 +446,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.trending_up,
-                            size: 20,
-                            color: _sortByMostUpvoted
-                                ? Colors.white
-                                : Colors.grey.shade700,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _sortButtonLabel,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _sortByMostUpvoted
-                                  ? Colors.white
-                                  : Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
+                      child: Icon(
+                        Icons.filter_alt,
+                        size: 20,
+                        color: _sortByMostUpvoted
+                            ? Colors.white
+                            : Colors.grey.shade700,
                       ),
                     ),
                   ),
@@ -466,7 +461,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   child: TextField(
                     controller: _areaSearchController,
                     decoration: InputDecoration(
-                      hintText: 'Search area...',
+                      hintText: 'Search by area',
                       hintStyle: TextStyle(
                         color: Colors.grey.shade400,
                         fontSize: 14,
