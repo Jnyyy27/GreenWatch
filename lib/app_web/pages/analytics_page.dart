@@ -117,36 +117,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
   }
 
-  Future<void> _pickCustomDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _customDateRange,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF10B981),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _customDateRange = picked;
-        _selectedRange = 'Custom Range';
-      });
-      _fetchData();
-    }
-  }
-
   String _extractArea(String location) {
     final lower = location.toLowerCase();
     for (final area in knownPenangAreas) {
@@ -230,7 +200,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       if (area != 'Unknown') areaCounts[area] = (areaCounts[area] ?? 0) + 1;
 
       // Count category
-      final category = report.category ?? 'Unknown';
+      final category = report.category;
       categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
 
       // Count per day

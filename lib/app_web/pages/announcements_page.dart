@@ -2125,51 +2125,6 @@ class _EditAnnouncementDialogState extends State<_EditAnnouncementDialog> {
     }
   }
 
-  void _showMapPicker() {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        child: SizedBox(
-          width: 500,
-          height: 400,
-          child: Column(
-            children: [
-              Expanded(
-                child: GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(_latitude ?? 3.1390, _longitude ?? 101.6869),
-                    zoom: 12,
-                  ),
-                  onTap: (LatLng position) async {
-                    final address = await _getAddressFromLatLng(
-                      position.latitude,
-                      position.longitude,
-                    );
-
-                    setState(() {
-                      _latitude = position.latitude;
-                      _longitude = position.longitude;
-                      _locationController.text = address ?? '';
-                    });
-
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Tap on map to select location',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _updateAnnouncement() async {
     if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

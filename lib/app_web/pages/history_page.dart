@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/report_model.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:image_picker/image_picker.dart';
 
 class HistoryPage extends StatefulWidget {
   final String department;
@@ -749,7 +748,6 @@ class _HistoryPageState extends State<HistoryPage> {
           final location = (data['exactLocation'] ?? '')
               .toString()
               .toLowerCase();
-          final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
           final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
 
           if (_selectedCategory != 'All' && category != _selectedCategory) {
@@ -1034,7 +1032,6 @@ class ReportDetailModal extends StatefulWidget {
 class _ReportDetailModalState extends State<ReportDetailModal> {
   late String _selectedStatus;
   List<TimelineEntry> _timeline = [];
-  List<String> _resolutionProofs = [];
   final TextEditingController _commentController = TextEditingController();
 
   final List<String> _statusOptions = [
@@ -1124,58 +1121,6 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
     }
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final picker = ImagePicker();
-      final XFile? pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 80,
-      );
-
-      if (pickedFile != null) {
-        final bytes = await pickedFile.readAsBytes();
-        final base64String = base64Encode(bytes);
-        setState(() => _resolutionProofs.add(base64String));
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Image uploaded'),
-                ],
-              ),
-              backgroundColor: Colors.green.shade700,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('Error: $e'),
-              ],
-            ),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _loadLatestStatus() async {
     try {
       final reportRef = FirebaseFirestore.instance
@@ -1185,85 +1130,6 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
       setState(() => _selectedStatus = _normalizeStatus(reportSnap['status']));
     } catch (e) {
       setState(() => _selectedStatus = _normalizeStatus(widget.report.status));
-    }
-  }
-
-  Future<void> _updateReport() async {
-    try {
-      final reportRef = FirebaseFirestore.instance
-          .collection('reports')
-          .doc(widget.report.reportId);
-      final reportSnap = await reportRef.get();
-      final normalizedCurrent = _normalizeStatus(reportSnap['status']);
-
-      if (normalizedCurrent == _selectedStatus) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.info_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Status is unchanged',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.blueGrey.shade700,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
-
-      await reportRef.update({
-        'status': _selectedStatus,
-        'updatedAt': DateTime.now(),
-      });
-      await reportRef.collection('timeline').add({
-        'action': _selectedStatus,
-        'timestamp': DateTime.now(),
-        'user': 'Officer',
-        'notes': _commentController.text,
-        'images': _resolutionProofs,
-      });
-
-      setState(() {});
-      _commentController.clear();
-      _resolutionProofs.clear();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Updated'),
-              ],
-            ),
-            backgroundColor: Colors.green.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
     }
   }
 

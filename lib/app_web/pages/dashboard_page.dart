@@ -96,10 +96,6 @@ class DashboardPage extends StatelessWidget {
               .where((r) => r.status.toLowerCase() == 'submitted')
               .toList();
 
-          final totalReports = reports
-              .where((r) => r.status.toLowerCase() != 'unsuccessful')
-              .length;
-
           final inProgressReports = reports
               .where((r) => r.status.toLowerCase() == 'in progress')
               .toList();
