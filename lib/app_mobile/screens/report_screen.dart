@@ -44,6 +44,8 @@ class _ReportScreenWithMLValidationState
     'worst',
     'irresponsible',
     'negligent',
+    'fuck you',
+    'fuck',
   };
 
   String? _selectedCategory;

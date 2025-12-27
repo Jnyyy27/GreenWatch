@@ -52,7 +52,7 @@ class MLValidatorService {
   bool _isInitialized = false;
   static const double radius = 0.00045;
 
-  /// True when model and labels were successfully loaded and interpreter is ready
+  // True when model and labels were successfully loaded and interpreter is ready
   bool _modelsLoaded = false;
 
   // Environmental issue related ImageNet classes
@@ -148,10 +148,12 @@ class MLValidatorService {
     }
   }
 
-  // Validates an image for environmental issue relevance using hybrid strategy:
-  // 1. Confidence-based inference (≥0.6) accepted
-  // 2. Semantic keyword matching for infrastructure/damage patterns
-  // 3. User description verification (keyword matching against damage descriptions)
+// ---------------------------------------------------------------------------------------
+// Image Validation Accuracy Improvements: Hybrid Strategy
+// ---------------------------------------------------------------------------------------
+// 1. Confidence-based inference (≥0.6) accepted
+// 2. Semantic keyword matching for infrastructure/damage patterns
+// 3. User description verification (keyword matching against damage descriptions)
   Future<ValidationResult> validateImage(
     String imagePath, {
     double confidenceThreshold = 0.3,
@@ -275,9 +277,6 @@ class MLValidatorService {
   }
 
   // Check if the detected object/scene is valid based on hybrid strategy:
-  // 1. High confidence (≥0.6) always accepted
-  // 2. Semantic keyword matching for category-specific infrastructure
-  // 3. Damage/deterioration patterns catch partially visible damaged objects
   bool _isEnvironmentalIssue(String label, double confidence, String category) {
     final lowerLabel = label.toLowerCase();
 
@@ -322,8 +321,8 @@ class MLValidatorService {
     return false;
   }
 
-  /// Check if label contains infrastructure-related semantics
-  /// Catches: streets, roads, sidewalks, poles, signs, barriers, etc.
+  // Check if label contains infrastructure-related semantics
+  // Catches: streets, roads, sidewalks, poles, signs, barriers, etc.
   bool _matchesInfrastructureSemantics(String label) {
     final infraPatterns = [
       'street',
@@ -354,8 +353,8 @@ class MLValidatorService {
     return infraPatterns.any((pattern) => label.contains(pattern));
   }
 
-  /// Check if label contains damage/deterioration semantics
-  /// Catches: broken, damaged, cracked, worn, rusty, missing, etc.
+  // Check if label contains damage/deterioration semantics
+  // Catches: broken, damaged, cracked, worn, rusty, missing, etc.
   bool _matchesDamageSemantics(String label) {
     final damagePatterns = [
       'broken',
@@ -452,12 +451,6 @@ class MLValidatorService {
     return false;
   }
 
-  // Get confidence threshold for a specific category
-  // Using unified 0.6 confidence threshold across all categories
-  double _getConfidenceThresholdForCategory(String category) {
-    return 0.6; // Unified threshold for all categories
-  }
-
   // Get top-k predictions with labels (filtering out very low confidence predictions)
   List<ImageClassification> _getTopPredictions(
     List<double> predictions,
@@ -489,7 +482,7 @@ class MLValidatorService {
         .toList();
   }
 
-  /// Convert image to input tensor format
+  // Convert image to input tensor format
   List<List<List<List<double>>>> _imageToByteListFloat32(img.Image image) {
     final List<List<List<List<double>>>> input = List.filled(
       1,
@@ -547,7 +540,9 @@ class MLValidatorService {
     }
   }
 
-  // Check for duplicate reports using image similarity and location proximity
+// ---------------------------------------------------------------------------------------
+// Duplication Report Checking: Using image similarity and location proximity
+// ---------------------------------------------------------------------------------------
   Future<DuplicateDetectionResult> checkForDuplicates({
     required String imagePath,
     required String category,
@@ -655,44 +650,6 @@ class MLValidatorService {
       print('❌ Error checking for duplicates: $e');
       return DuplicateDetectionResult(isDuplicate: false, similarity: 0.0);
     }
-  }
-
-  /// Calculate similarity between two images using color histogram
-  double _calculateImageSimilarity(img.Image image1, img.Image image2) {
-    final hist1 = _getColorHistogram(image1);
-    final hist2 = _getColorHistogram(image2);
-
-    // Calculate chi-square distance
-    double distance = 0.0;
-    for (int i = 0; i < hist1.length; i++) {
-      if (hist1[i] + hist2[i] > 0) {
-        final diff = hist1[i] - hist2[i];
-        distance += (diff * diff) / (hist1[i] + hist2[i]);
-      }
-    }
-
-    // Convert to similarity score (0-1, where 1 is identical)
-    return 1.0 / (1.0 + distance / 1000.0);
-  }
-
-  /// Get normalized color histogram for an image
-  List<double> _getColorHistogram(img.Image image) {
-    const int bins = 256;
-    final histogram = List<int>.filled(bins * 3, 0);
-
-    for (final pixel in image) {
-      final r = (pixel.rNormalized * (bins - 1)).toInt();
-      final g = (pixel.gNormalized * (bins - 1)).toInt();
-      final b = (pixel.bNormalized * (bins - 1)).toInt();
-
-      histogram[r]++;
-      histogram[bins + g]++;
-      histogram[bins * 2 + b]++;
-    }
-
-    // Normalize
-    final total = histogram.fold<int>(0, (a, b) => a + b);
-    return histogram.map((count) => count / total).toList();
   }
 
   void dispose() {

@@ -296,7 +296,7 @@ class ReportService {
     }
   }
 
-  /// Update report status in Firestore
+  // Update report status in Firestore
   Future<void> updateReportStatus(String reportId, String newStatus) async {
     try {
       print('🔄 Updating report status to: $newStatus');
@@ -316,6 +316,7 @@ class ReportService {
   // Run ML-based verification and duplicate detection for a saved report.
   // Uses hybrid strategy: confidence-based inference + semantic matching + user description verification
   // Duplicate scoring based on: category match, location, description similarity, image similarity, and timeline
+  // Ethical considerations: if flagged sensitive, skip ML and mark unsuccessful
   // Returns a map with verification details and updates the report document with results.
   Future<Map<String, dynamic>> verifyReport({
     required String reportId,
@@ -431,7 +432,7 @@ class ReportService {
       if (dupResult['isDuplicate']) {
         verification['reason'] =
             'Duplicate report found (Thank you for helping to keep reports unique)';
-        verification['status'] = 'unsuccessful';
+        verification['status'] = 'Unsuccessful';
       }
 
       // If ML validation passed and not duplicate -> submitted
@@ -476,8 +477,7 @@ class ReportService {
     }
   }
 
-  // Enhanced duplicate detection with composite scoring
-  // Scores based on: category match, location proximity, description similarity, image similarity, timeline
+  // Duplication Scores based on: category match, location proximity, description similarity, image similarity, timeline
   // Returns: {score: 0.0-1.0, isDuplicate: bool}
   Future<Map<String, dynamic>> _checkDuplicatesWithScoring({
     required String imagePath,
@@ -562,7 +562,7 @@ class ReportService {
             reportDescription,
           );
 
-          // === HARD DUPLICATE RULE ===
+          // --- HARD DUPLICATE RULE ---
           // If same day + within 100m + high description similarity > 0.7, mark as duplicate immediately
           final double distanceKm = _calculateDistance(
             latitude,
