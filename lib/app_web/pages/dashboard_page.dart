@@ -112,10 +112,6 @@ class DashboardPage extends StatelessWidget {
               )
               .toList();
 
-          final resolvedReports = reports
-              .where((r) => r.status.toLowerCase() == 'resolved')
-              .toList();
-
           // Top 5 new reports
           final top5NewReports =
               newReports24h
@@ -169,13 +165,13 @@ class DashboardPage extends StatelessWidget {
                       // CRITICAL: This dictates the minimum width of the cards.
                       // 280.0 ensures that on mobile (width < 560), only 1 column shows.
                       // On wider screens, 2, 3, 4, or 5 columns will show.
-                      maxCrossAxisExtent: 230.0,
+                      maxCrossAxisExtent: 300.0,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                       childAspectRatio:
                           2.8, // Adjusted ratio for better vertical spacing
                     ),
-                    itemCount: 6, // Total number of KPIs
+                    itemCount: 4, // Total number of KPIs
                     itemBuilder: (context, index) {
                       // Use a list to hold your KPI data
                       final kpiData = [
@@ -203,18 +199,12 @@ class DashboardPage extends StatelessWidget {
                           'color': const Color.fromARGB(255, 251, 0, 209),
                           'icon': Icons.warning_amber_rounded,
                         },
-                        {
-                          'title': 'Resolved',
-                          'count': resolvedReports.length,
-                          'color': Colors.green.shade600,
-                          'icon': Icons.check_circle,
-                        },
-                        {
-                          'title': 'Total Reports',
-                          'count': totalReports,
-                          'color': Colors.purple.shade600,
-                          'icon': Icons.folder_open,
-                        },
+                        // {
+                        //   'title': 'Total Reports',
+                        //   'count': totalReports,
+                        //   'color': Colors.green.shade600,
+                        //   'icon': Icons.folder_open,
+                        // },
                       ];
 
                       final data = kpiData[index];
@@ -229,7 +219,7 @@ class DashboardPage extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 10),
 
                 // Content sections
                 Padding(

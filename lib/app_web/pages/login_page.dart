@@ -1,92 +1,3 @@
-// import 'package:flutter/material.dart';
-// import '../services/auth_service.dart';
-// import 'admin_dashboard_page.dart';
-
-// class LoginPage extends StatefulWidget {
-//   const LoginPage({super.key});
-
-//   @override
-//   State<LoginPage> createState() => _LoginPageState();
-// }
-
-// class _LoginPageState extends State<LoginPage> {
-//   String? _selectedDepartment;
-//   final TextEditingController _passwordController = TextEditingController();
-//   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-//   void _login() {
-//     if (_formKey.currentState!.validate()) {
-//       final password = _passwordController.text.trim();
-//       if (AuthService.login(_selectedDepartment!, password)) {
-//         Navigator.pushReplacement(
-//           context,
-//           MaterialPageRoute(
-//             builder: (context) =>
-//                 AdminDashboardPage(department: _selectedDepartment!),
-//           ),
-//         );
-//       } else {
-//         ScaffoldMessenger.of(
-//           context,
-//         ).showSnackBar(const SnackBar(content: Text('Incorrect password')));
-//       }
-//     }
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       body: Center(
-//         child: Card(
-//           margin: const EdgeInsets.all(32),
-//           child: Padding(
-//             padding: const EdgeInsets.all(24),
-//             child: Form(
-//               key: _formKey,
-//               child: Column(
-//                 mainAxisSize: MainAxisSize.min,
-//                 children: [
-//                   const Text(
-//                     'Department Login',
-//                     style: TextStyle(fontSize: 24),
-//                   ),
-//                   const SizedBox(height: 20),
-//                   DropdownButtonFormField<String>(
-//                     decoration: const InputDecoration(
-//                       labelText: 'Select Department',
-//                     ),
-//                     value: _selectedDepartment,
-//                     items: AuthService.departments
-//                         .map(
-//                           (dep) =>
-//                               DropdownMenuItem(value: dep, child: Text(dep)),
-//                         )
-//                         .toList(),
-//                     onChanged: (val) =>
-//                         setState(() => _selectedDepartment = val),
-//                     validator: (val) =>
-//                         val == null ? 'Please select a department' : null,
-//                   ),
-//                   const SizedBox(height: 16),
-//                   TextFormField(
-//                     controller: _passwordController,
-//                     decoration: const InputDecoration(labelText: 'Password'),
-//                     obscureText: true,
-//                     validator: (val) =>
-//                         val == null || val.isEmpty ? 'Enter password' : null,
-//                   ),
-//                   const SizedBox(height: 24),
-//                   ElevatedButton(onPressed: _login, child: const Text('Login')),
-//                 ],
-//               ),
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
@@ -130,16 +41,12 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.green.shade50,
-              Colors.green.shade100,
-              Colors.green.shade200,
-            ],
+          image: DecorationImage(
+            image: AssetImage('assets/images/pclogin.png'),
+            fit: BoxFit.cover, // makes the image cover the entire container
           ),
         ),
+
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),

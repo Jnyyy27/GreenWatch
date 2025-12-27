@@ -43,7 +43,7 @@ class NavigationSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final navItems = [
       ('Dashboard', Icons.home, 0),
-      ('Report Queue', Icons.assignment, 1),
+      ('Report Management', Icons.assignment, 1),
       ('History', Icons.history, 3),
       ('Announcements', Icons.notifications, 2),
       ('Analytics', Icons.analytics, 4),

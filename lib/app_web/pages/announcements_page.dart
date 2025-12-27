@@ -1066,21 +1066,46 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
           ),
           child: Column(
             children: [
-              // Close button
-              Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.grey.shade100,
-                      padding: const EdgeInsets.all(8),
-                    ),
+              // Top bar with background color, text + close button
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 163, 233, 255),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
                   ),
                 ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Announcement Details',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 16),
 
               // Scrollable content
               Expanded(
@@ -1611,49 +1636,6 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
-
-  // void _showMapPicker() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (_) => Dialog(
-  //       child: SizedBox(
-  //         width: 500,
-  //         height: 400,
-  //         child: Column(
-  //           children: [
-  //             Expanded(
-  //               child: GoogleMap(
-  //                 initialCameraPosition: const CameraPosition(
-  //                   target: LatLng(3.1390, 101.6869),
-  //                   zoom: 12,
-  //                 ),
-  //                 onTap: (LatLng position) async {
-  //                   final address = await _getAddressFromLatLng(
-  //                     position.latitude,
-  //                     position.longitude,
-  //                   );
-
-  //                   setState(() {
-  //                     _latitude = position.latitude;
-  //                     _longitude = position.longitude;
-  //                     _locationController.text = address ?? ''; // ADD THIS LINE
-  //                   });
-  //                 },
-  //               ),
-  //             ),
-  //             Padding(
-  //               padding: const EdgeInsets.all(16),
-  //               child: Text(
-  //                 'Tap on map to select location',
-  //                 style: TextStyle(color: Colors.grey.shade600),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Future<void> _createAnnouncement() async {
     if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {

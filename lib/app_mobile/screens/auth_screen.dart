@@ -20,7 +20,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
-  
+
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -29,26 +29,27 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    
+
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    
+
     _slideController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
-    
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
+
     _fadeController.forward();
     _slideController.forward();
   }
@@ -99,7 +100,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             backgroundColor: Color(0xFFEF5350),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -120,7 +123,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     const primary = Color(0xFF4CAF50);
-    const primaryDark = Color(0xFF388E3C);
     const accent = Color(0xFF66BB6A);
 
     return Scaffold(
@@ -152,7 +154,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
               size: 300,
               color: primary.withOpacity(0.04),
             ),
-            
+
             // Main content
             SafeArea(
               child: FadeTransition(
@@ -160,7 +162,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                 child: Center(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 32,
+                    ),
                     child: SlideTransition(
                       position: _slideAnimation,
                       child: Column(
@@ -219,10 +224,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF4CAF50),
-                  Color(0xFF66BB6A),
-                ],
+                colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -234,11 +236,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            child: Icon(
-              Icons.eco_rounded,
-              size: 48,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.eco_rounded, size: 48, color: Colors.white),
           ),
         ),
         const SizedBox(height: 24),
@@ -355,7 +353,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             controller: _nameController,
             label: 'Full Name',
             icon: Icons.person_outline_rounded,
-            validator: (value) => value!.isEmpty ? 'Please enter your name' : null,
+            validator: (value) =>
+                value!.isEmpty ? 'Please enter your name' : null,
             primary: primary,
           ),
           const SizedBox(height: 16),
@@ -365,7 +364,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           label: 'Email Address',
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
-          validator: (value) => value!.contains('@') ? null : 'Enter a valid email',
+          validator: (value) =>
+              value!.contains('@') ? null : 'Enter a valid email',
           primary: primary,
         ),
         const SizedBox(height: 16),
@@ -374,15 +374,19 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           label: 'Password',
           icon: Icons.lock_outline_rounded,
           obscureText: _obscurePassword,
-          validator: (value) => value!.length < 6 ? 'Minimum 6 characters required' : null,
+          validator: (value) =>
+              value!.length < 6 ? 'Minimum 6 characters required' : null,
           primary: primary,
           suffixIcon: IconButton(
             icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               color: Colors.white.withOpacity(0.6),
               size: 20,
             ),
-            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            onPressed: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
           ),
         ),
       ],
@@ -446,7 +450,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 18,
+        ),
       ),
       validator: validator,
     );
@@ -499,7 +506,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                       ),
                       const SizedBox(width: 8),
                       Icon(
-                        _isLogin ? Icons.login_rounded : Icons.arrow_forward_rounded,
+                        _isLogin
+                            ? Icons.login_rounded
+                            : Icons.arrow_forward_rounded,
                         color: Colors.white,
                         size: 20,
                       ),

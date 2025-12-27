@@ -29,6 +29,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
       'Roads signs',
       'Faded road markings',
       'Traffic lights',
+      'Fallen trees',
     ],
     'TNB': ['Streetlights'],
     'JKR': ['Damage roads', 'Road potholes'],
@@ -194,10 +195,9 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-
       appBar: AppBar(
         title: const Text(
-          'Report Queue',
+          'Report Management',
           style: TextStyle(
             color: Color(0xFF1a1a1a),
             fontSize: 18,
@@ -227,16 +227,14 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
             ),
             child: Column(
               children: [
-                // Main Search Bar with integrated filters
+                // Search Bar with Filter Button (Status dropdown removed)
                 Row(
                   children: [
                     // Search Input
-                    //
                     Expanded(
                       child: TextField(
                         controller: _searchController,
-                        textAlignVertical:
-                            TextAlignVertical.center, // centers text vertically
+                        textAlignVertical: TextAlignVertical.center,
                         decoration: InputDecoration(
                           hintText: 'Search reports...',
                           prefixIcon: const Icon(Icons.search),
@@ -261,56 +259,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                         ),
                         onChanged: (value) =>
                             setState(() => _searchQuery = value),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Status Dropdown
-                    Container(
-                      height: 42,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedStatus ?? 'All',
-                          icon: Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 18,
-                            color: Colors.grey.shade600,
-                          ),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade800,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          items: _allStatuses
-                              .map(
-                                (status) => DropdownMenuItem(
-                                  value: status,
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: _getStatusColor(status),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(status),
-                                    ],
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() => _selectedStatus = value ?? 'All');
-                          },
-                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -384,7 +332,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                     ),
                   ],
                 ),
-                // Active Filters Chips (if any)
+                // Active Filters Chips
                 if (_selectedCategories.isNotEmpty ||
                     _startDate != null ||
                     _endDate != null ||
@@ -395,7 +343,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        // Category chips
                         ..._selectedCategories.map(
                           (category) => _buildFilterChip(
                             label: category,
@@ -406,7 +353,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                             },
                           ),
                         ),
-                        // Date range chip
                         if (_startDate != null || _endDate != null)
                           _buildFilterChip(
                             label:
@@ -418,7 +364,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                               });
                             },
                           ),
-                        // Sort chip
                         if (_sortBy != 'newest')
                           _buildFilterChip(
                             label: _getSortLabel(),
@@ -428,7 +373,6 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
                               });
                             },
                           ),
-                        // Clear all button
                         InkWell(
                           onTap: () {
                             setState(() {
@@ -463,118 +407,215 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
               ],
             ),
           ),
-          // Main Content: Left Panel (List) and Right Panel (Details)
+          // Main Content with Tabs
           Expanded(
             child: Row(
               children: [
-                // Left Panel: Report List
+                // Left Panel: Status Tabs + Report List
                 Expanded(
                   flex: 1,
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('reports')
-                        .where('department', isEqualTo: widget.department)
-                        .where(
-                          'status',
-                          whereIn: ['Submitted', 'Viewed', 'In Progress'],
-                        )
-                        .orderBy('createdAt', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text(
-                            'Error: ${snapshot.error}',
-                            style: TextStyle(
-                              color: Colors.red.shade400,
-                              fontSize: 16,
+                  child: Column(
+                    children: [
+                      // Status Tabs
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 1,
                             ),
                           ),
-                        );
-                      }
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inbox,
-                                size: 64,
-                                color: Colors.grey.shade300,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No reports available',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey.shade600,
+                        ),
+                        child: Row(
+                          children: _allStatuses.map((status) {
+                            final isSelected = _selectedStatus == status;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedStatus = status;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFF2E7D32)
+                                            : Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color(0xFF2E7D32)
+                                              : Colors.grey.shade300,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          if (status != 'All') ...[
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : _getStatusColor(status),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          Text(
+                                            status,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final allReports = snapshot.data!.docs
-                          .map((doc) => Report.fromFirestore(doc))
-                          .where(
-                            (report) =>
-                                report.status.toLowerCase().trim() !=
-                                'pending verification',
-                          )
-                          .toList();
-
-                      final filteredReports = _filterReports(allReports);
-
-                      if (filteredReports.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                size: 64,
-                                color: Colors.grey.shade300,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No reports match your filters',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey.shade600,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      // Report List
+                      Expanded(
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('reports')
+                              .where('department', isEqualTo: widget.department)
+                              .where(
+                                'status',
+                                whereIn: ['Submitted', 'Viewed', 'In Progress'],
+                              )
+                              .orderBy('createdAt', descending: true)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Text(
+                                  'Error: ${snapshot.error}',
+                                  style: TextStyle(
+                                    color: Colors.red.shade400,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                              );
+                            }
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
 
-                      return ValueListenableBuilder<Report?>(
-                        valueListenable: selectedReportNotifier,
-                        builder: (context, selectedReport, _) {
-                          return ListView.builder(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: filteredReports.length,
-                            itemBuilder: (context, index) {
-                              final report = filteredReports[index];
-                              final isSelected =
-                                  selectedReport?.reportId == report.reportId;
+                            if (!snapshot.hasData ||
+                                snapshot.data!.docs.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.inbox,
+                                      size: 64,
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No reports available',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
 
-                              return _buildReportListItem(report, isSelected);
-                            },
-                          );
-                        },
-                      );
-                    },
+                            final allReports = snapshot.data!.docs
+                                .map((doc) => Report.fromFirestore(doc))
+                                .where(
+                                  (report) =>
+                                      report.status.toLowerCase().trim() !=
+                                      'pending verification',
+                                )
+                                .toList();
+
+                            final filteredReports = _filterReports(allReports);
+
+                            if (filteredReports.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.search_off,
+                                      size: 64,
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No reports match your filters',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return ValueListenableBuilder<Report?>(
+                              valueListenable: selectedReportNotifier,
+                              builder: (context, selectedReport, _) {
+                                return ListView.builder(
+                                  padding: const EdgeInsets.all(12),
+                                  itemCount: filteredReports.length,
+                                  itemBuilder: (context, index) {
+                                    final report = filteredReports[index];
+                                    final isSelected =
+                                        selectedReport?.reportId ==
+                                        report.reportId;
+
+                                    return _buildReportListItem(
+                                      report,
+                                      isSelected,
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // Divider
                 Container(width: 1, color: Colors.grey.shade300),
-                // Right Panel: Report Details (listens to selectedReportNotifier)
+                // Right Panel: Report Details
                 Expanded(
                   flex: 1,
                   child: ValueListenableBuilder<Report?>(
@@ -1083,157 +1124,439 @@ class _FilterDialogState extends State<_FilterDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Additional Filters'),
-      content: SingleChildScrollView(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category Filter
-            Text(
-              'Problem Type',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ...widget.departmentCategories.map((category) {
-              return CheckboxListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(category, style: const TextStyle(fontSize: 14)),
-                value: _tempCategories.contains(category),
-                onChanged: (value) {
-                  setState(() {
-                    if (value ?? false) {
-                      _tempCategories.add(category);
-                    } else {
-                      _tempCategories.remove(category);
-                    }
-                  });
-                },
-              );
-            }),
-            const SizedBox(height: 16),
-            // Date Range Filter
-            Text('Date Range', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _tempStartDate ?? DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now(),
-                      );
-                      if (date != null) {
-                        setState(() => _tempStartDate = date);
-                      }
-                    },
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(
-                      _tempStartDate == null
-                          ? 'Start'
-                          : '${_tempStartDate!.day}/${_tempStartDate!.month}',
-                      style: const TextStyle(fontSize: 12),
+            // Header
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.filter_list,
+                      color: Colors.green.shade700,
+                      size: 24,
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _tempEndDate ?? DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now(),
-                      );
-                      if (date != null) {
-                        setState(() => _tempEndDate = date);
-                      }
-                    },
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(
-                      _tempEndDate == null
-                          ? 'End'
-                          : '${_tempEndDate!.day}/${_tempEndDate!.month}',
-                      style: const TextStyle(fontSize: 12),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'Filter Reports',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Problem Type Section
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.category_outlined,
+                            size: 20,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Problem Type',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          children: widget.departmentCategories.map((category) {
+                            return CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                category,
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                              value: _tempCategories.contains(category),
+                              activeColor: Colors.green.shade600,
+                              onChanged: (value) {
+                                setState(() {
+                                  if (value ?? false) {
+                                    _tempCategories.add(category);
+                                  } else {
+                                    _tempCategories.remove(category);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Date Range Section
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.date_range,
+                            size: 20,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Date Range',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: InkWell(
+                                onTap: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate:
+                                        _tempStartDate ?? DateTime.now(),
+                                    firstDate: DateTime(2020),
+                                    lastDate: DateTime.now(),
+                                    builder: (context, child) {
+                                      return Theme(
+                                        data: Theme.of(context).copyWith(
+                                          colorScheme: ColorScheme.light(
+                                            primary: Colors.green.shade600,
+                                          ),
+                                        ),
+                                        child: child!,
+                                      );
+                                    },
+                                  );
+                                  if (date != null) {
+                                    setState(() => _tempStartDate = date);
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 16,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _tempStartDate == null
+                                            ? 'Start Date'
+                                            : '${_tempStartDate!.day}/${_tempStartDate!.month}/${_tempStartDate!.year}',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: _tempStartDate == null
+                                              ? Colors.grey.shade600
+                                              : Colors.grey.shade800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(
+                              Icons.arrow_forward,
+                              color: Colors.grey.shade400,
+                              size: 20,
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: InkWell(
+                                onTap: () async {
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: _tempEndDate ?? DateTime.now(),
+                                    firstDate: DateTime(2020),
+                                    lastDate: DateTime.now(),
+                                    builder: (context, child) {
+                                      return Theme(
+                                        data: Theme.of(context).copyWith(
+                                          colorScheme: ColorScheme.light(
+                                            primary: Colors.green.shade600,
+                                          ),
+                                        ),
+                                        child: child!,
+                                      );
+                                    },
+                                  );
+                                  if (date != null) {
+                                    setState(() => _tempEndDate = date);
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.event,
+                                        size: 16,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _tempEndDate == null
+                                            ? 'End Date'
+                                            : '${_tempEndDate!.day}/${_tempEndDate!.month}/${_tempEndDate!.year}',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: _tempEndDate == null
+                                              ? Colors.grey.shade600
+                                              : Colors.grey.shade800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Sort By Section
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.sort,
+                            size: 20,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Sort By',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          children: [
+                            RadioListTile<String>(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 0,
+                              ),
+                              title: const Text(
+                                'Newest First',
+                                style: TextStyle(fontSize: 15),
+                              ),
+                              value: 'newest',
+                              groupValue: _tempSortBy,
+                              activeColor: Colors.green.shade600,
+                              onChanged: (value) {
+                                setState(() => _tempSortBy = value ?? 'newest');
+                              },
+                            ),
+                            RadioListTile<String>(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 0,
+                              ),
+                              title: const Text(
+                                'Oldest First',
+                                style: TextStyle(fontSize: 15),
+                              ),
+                              value: 'oldest',
+                              groupValue: _tempSortBy,
+                              activeColor: Colors.green.shade600,
+                              onChanged: (value) {
+                                setState(() => _tempSortBy = value ?? 'oldest');
+                              },
+                            ),
+                            RadioListTile<String>(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 0,
+                              ),
+                              title: const Text(
+                                'Most Upvoted',
+                                style: TextStyle(fontSize: 15),
+                              ),
+                              value: 'most_liked',
+                              groupValue: _tempSortBy,
+                              activeColor: Colors.green.shade600,
+                              onChanged: (value) {
+                                setState(
+                                  () => _tempSortBy = value ?? 'most_liked',
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _tempCategories.clear();
+                                  _tempStartDate = null;
+                                  _tempEndDate = null;
+                                  _tempSortBy = 'newest';
+                                });
+                              },
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: const Text(
+                                'Reset',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey.shade700,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                widget.onApply(
+                                  _tempCategories,
+                                  _tempStartDate,
+                                  _tempEndDate,
+                                  _tempSortBy,
+                                );
+                              },
+                              icon: const Icon(Icons.check, size: 18),
+                              label: const Text(
+                                'Apply',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.shade600,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Sort By Filter
-            Text('Sort By', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            RadioListTile<String>(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Newest First', style: TextStyle(fontSize: 14)),
-              value: 'newest',
-              groupValue: _tempSortBy,
-              onChanged: (value) {
-                setState(() => _tempSortBy = value ?? 'newest');
-              },
-            ),
-            RadioListTile<String>(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Oldest First', style: TextStyle(fontSize: 14)),
-              value: 'oldest',
-              groupValue: _tempSortBy,
-              onChanged: (value) {
-                setState(() => _tempSortBy = value ?? 'oldest');
-              },
-            ),
-            RadioListTile<String>(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Most Upvoted', style: TextStyle(fontSize: 14)),
-              value: 'most_liked',
-              groupValue: _tempSortBy,
-              onChanged: (value) {
-                setState(() => _tempSortBy = value ?? 'most_liked');
-              },
+              ),
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () {
-            setState(() {
-              _tempCategories.clear();
-              _tempStartDate = null;
-              _tempEndDate = null;
-              _tempSortBy = 'newest';
-            });
-          },
-          child: const Text('Reset'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            widget.onApply(
-              _tempCategories,
-              _tempStartDate,
-              _tempEndDate,
-              _tempSortBy,
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green.shade700,
-          ),
-          child: const Text('Apply', style: TextStyle(color: Colors.white)),
-        ),
-      ],
     );
   }
 }

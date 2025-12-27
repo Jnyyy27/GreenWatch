@@ -21,8 +21,10 @@ class _HistoryPageState extends State<HistoryPage> {
 
   String _searchQuery = '';
   String _selectedCategory = 'All';
-  String _selectedDateFilter = 'All Time';
+  String _selectedDateFilter = 'Most Recent';
   DateTimeRange? _selectedDateRange;
+  DateTime? _tempStartDate;
+  DateTime? _tempEndDate;
 
   final Map<String, List<String>> _departmentCategories = {
     'MBPP': [
@@ -208,7 +210,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
             ),
           ),
-          if (_selectedDateFilter != 'All Time') ...[
+          if (_selectedDateFilter != 'Most Recent') ...[
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
@@ -220,7 +222,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 icon: Icon(Icons.clear, size: 20, color: Colors.red.shade700),
                 onPressed: () {
                   setState(() {
-                    _selectedDateFilter = 'All Time';
+                    _selectedDateFilter = 'Most Recent';
                     _selectedDateRange = null;
                   });
                 },
@@ -234,148 +236,454 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   void _showDateFilterMenu() {
-    showModalBottomSheet(
+    String _tempDateFilter = _selectedDateFilter;
+    DateTime? _dialogTempStartDate = _tempStartDate;
+    DateTime? _dialogTempEndDate = _tempEndDate;
+
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 500),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Filter by Date',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.filter_list,
+                            color: Colors.green.shade700,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          'Filter History',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildDateOption('All Time', Icons.all_inclusive),
-                  _buildDateOption('Most Recent', Icons.new_releases),
-                  _buildDateOption('Oldest First', Icons.history),
-                  _buildDateOption(
-                    'Custom Range',
-                    Icons.date_range,
-                    isCustom: true,
+
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Date Filter Options Section
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.sort,
+                                  size: 20,
+                                  color: Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Sort By',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Column(
+                                children: [
+                                  RadioListTile<String>(
+                                    dense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 0,
+                                    ),
+                                    title: const Text(
+                                      'Most Recent',
+                                      style: TextStyle(fontSize: 15),
+                                    ),
+                                    value: 'Most Recent',
+                                    groupValue: _tempDateFilter,
+                                    activeColor: Colors.green.shade600,
+                                    onChanged: (value) {
+                                      setDialogState(() {
+                                        _tempDateFilter =
+                                            value ?? 'Most Recent';
+                                      });
+                                    },
+                                  ),
+                                  RadioListTile<String>(
+                                    dense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 0,
+                                    ),
+                                    title: const Text(
+                                      'Oldest First',
+                                      style: TextStyle(fontSize: 15),
+                                    ),
+                                    value: 'Oldest First',
+                                    groupValue: _tempDateFilter,
+                                    activeColor: Colors.green.shade600,
+                                    onChanged: (value) {
+                                      setDialogState(() {
+                                        _tempDateFilter =
+                                            value ?? 'Oldest First';
+                                      });
+                                    },
+                                  ),
+                                  RadioListTile<String>(
+                                    dense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 0,
+                                    ),
+                                    title: const Text(
+                                      'Custom',
+                                      style: TextStyle(fontSize: 15),
+                                    ),
+                                    value: 'Custom',
+                                    groupValue: _tempDateFilter,
+                                    activeColor: Colors.green.shade600,
+                                    onChanged: (value) {
+                                      setDialogState(() {
+                                        _tempDateFilter = value ?? 'Custom';
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Custom Date Range (show only if Custom is selected)
+                            if (_tempDateFilter == 'Custom') ...[
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.date_range,
+                                    size: 20,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Date Range',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      child: InkWell(
+                                        onTap: () async {
+                                          final date = await showDatePicker(
+                                            context: context,
+                                            initialDate:
+                                                _dialogTempStartDate ??
+                                                DateTime.now(),
+                                            firstDate: DateTime(2020),
+                                            lastDate: DateTime.now(),
+                                            builder: (context, child) {
+                                              return Theme(
+                                                data: Theme.of(context)
+                                                    .copyWith(
+                                                      colorScheme:
+                                                          ColorScheme.light(
+                                                            primary: Colors
+                                                                .green
+                                                                .shade600,
+                                                          ),
+                                                    ),
+                                                child: child!,
+                                              );
+                                            },
+                                          );
+                                          if (date != null) {
+                                            setDialogState(() {
+                                              _dialogTempStartDate = date;
+                                            });
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.calendar_today,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _dialogTempStartDate == null
+                                                    ? 'Start Date'
+                                                    : '${_dialogTempStartDate!.day}/${_dialogTempStartDate!.month}/${_dialogTempStartDate!.year}',
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  color:
+                                                      _dialogTempStartDate ==
+                                                          null
+                                                      ? Colors.grey.shade600
+                                                      : Colors.grey.shade800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    child: Icon(
+                                      Icons.arrow_forward,
+                                      color: Colors.grey.shade400,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      child: InkWell(
+                                        onTap: () async {
+                                          final date = await showDatePicker(
+                                            context: context,
+                                            initialDate:
+                                                _dialogTempEndDate ??
+                                                DateTime.now(),
+                                            firstDate: DateTime(2020),
+                                            lastDate: DateTime.now(),
+                                            builder: (context, child) {
+                                              return Theme(
+                                                data: Theme.of(context)
+                                                    .copyWith(
+                                                      colorScheme:
+                                                          ColorScheme.light(
+                                                            primary: Colors
+                                                                .green
+                                                                .shade600,
+                                                          ),
+                                                    ),
+                                                child: child!,
+                                              );
+                                            },
+                                          );
+                                          if (date != null) {
+                                            setDialogState(() {
+                                              _dialogTempEndDate = date;
+                                            });
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.event,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _dialogTempEndDate == null
+                                                    ? 'End Date'
+                                                    : '${_dialogTempEndDate!.day}/${_dialogTempEndDate!.month}/${_dialogTempEndDate!.year}',
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  color:
+                                                      _dialogTempEndDate == null
+                                                      ? Colors.grey.shade600
+                                                      : Colors.grey.shade800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+
+                            const SizedBox(height: 32),
+
+                            // Action Buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      setDialogState(() {
+                                        _tempDateFilter = 'All Time';
+                                        _dialogTempStartDate = null;
+                                        _dialogTempEndDate = null;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.refresh, size: 18),
+                                    label: const Text(
+                                      'Reset',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.grey.shade700,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      side: BorderSide(
+                                        color: Colors.grey.shade300,
+                                        width: 1.5,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedDateFilter = _tempDateFilter;
+                                        if (_tempDateFilter == 'Custom') {
+                                          _tempStartDate = _dialogTempStartDate;
+                                          _tempEndDate = _dialogTempEndDate;
+                                          if (_tempStartDate != null &&
+                                              _tempEndDate != null) {
+                                            _selectedDateRange = DateTimeRange(
+                                              start: _tempStartDate!,
+                                              end: _tempEndDate!,
+                                            );
+                                          }
+                                          if (_tempStartDate != null &&
+                                              _tempEndDate == null) {
+                                            _selectedDateRange = DateTimeRange(
+                                              start: _tempStartDate!,
+                                              end: DateTime.now(),
+                                            );
+                                          }
+                                          if (_tempStartDate == null &&
+                                              _tempEndDate != null) {
+                                            // Incomplete range, reset to null
+                                            _selectedDateRange = DateTimeRange(
+                                              start: DateTime(2020),
+                                              end: _tempEndDate!,
+                                            );
+                                          }
+                                        } else {
+                                          _selectedDateRange = null;
+                                          _tempStartDate = null;
+                                          _tempEndDate = null;
+                                        }
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                    icon: const Icon(Icons.check, size: 18),
+                                    label: const Text(
+                                      'Apply',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green.shade600,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
-  }
-
-  Widget _buildDateOption(
-    String label,
-    IconData icon, {
-    bool isCustom = false,
-  }) {
-    final isSelected = _selectedDateFilter == label;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: isSelected ? Colors.green.shade50 : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () async {
-            if (isCustom) {
-              Navigator.pop(context);
-              await _pickDateRange();
-            } else {
-              setState(() => _selectedDateFilter = label);
-              Navigator.pop(context);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? Colors.green.shade300
-                    : Colors.grey.shade200,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 22,
-                  color: isSelected
-                      ? Colors.green.shade700
-                      : Colors.grey.shade600,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: isSelected
-                          ? Colors.green.shade700
-                          : Colors.grey.shade800,
-                    ),
-                  ),
-                ),
-                if (isSelected)
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green.shade700,
-                    size: 20,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickDateRange() async {
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2023),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Colors.green.shade600,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (range != null) {
-      setState(() {
-        _selectedDateRange = range;
-        _selectedDateFilter = 'Custom';
-      });
-    }
   }
 
   Widget _buildResolvedList() {
@@ -442,6 +750,7 @@ class _HistoryPageState extends State<HistoryPage> {
               .toString()
               .toLowerCase();
           final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+          final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
 
           if (_selectedCategory != 'All' && category != _selectedCategory) {
             return false;
@@ -451,9 +760,9 @@ class _HistoryPageState extends State<HistoryPage> {
               !location.contains(_searchQuery)) {
             return false;
           }
-          if (_selectedDateRange != null && createdAt != null) {
-            if (createdAt.isBefore(_selectedDateRange!.start) ||
-                createdAt.isAfter(
+          if (_selectedDateRange != null && updatedAt != null) {
+            if (updatedAt.isBefore(_selectedDateRange!.start) ||
+                updatedAt.isAfter(
                   _selectedDateRange!.end.add(const Duration(days: 1)),
                 )) {
               return false;

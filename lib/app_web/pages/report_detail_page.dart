@@ -1020,13 +1020,26 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                 },
               ),
               const SizedBox(height: 20),
-              Text(
-                'Resolution Proof',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Resolution Proof',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  Text(
+                    '(Mandatory for Resolved status)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               if (_resolutionProofs.isEmpty)
@@ -1134,13 +1147,26 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                   ],
                 ),
               const SizedBox(height: 20),
-              Text(
-                'Comments',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Comments',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  Text(
+                    '(Optional)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               TextField(
