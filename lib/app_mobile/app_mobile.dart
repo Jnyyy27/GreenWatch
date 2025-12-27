@@ -159,6 +159,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void dispose() {
     _reportsSubscription?.cancel();
     _mapController?.dispose();
+    _mapController = null;
     super.dispose();
   }
 
@@ -215,11 +216,13 @@ class _MyHomePageState extends State<MyHomePage> {
       });
 
       // Move camera to current location
-      _mapController?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: _currentLocation!, zoom: 15.0),
-        ),
-      );
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: _currentLocation!, zoom: 15.0),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
