@@ -59,12 +59,13 @@ class ReportService {
   // Map categories to departments
   static String getDepartmentForCategory(String category) {
     switch (category) {
-      case 'Public equipment problem':
-      case 'Damage/missing road signs':
+      case 'Public facilities':
+      case 'Road signs':
       case 'Faded road markings':
-      case 'Traffic light problem':
+      case 'Fallen trees':
+      case 'Traffic lights':
         return 'MBPP';
-      case 'Streetlights problem':
+      case 'Streetlights':
         return 'TNB';
       case 'Damage roads':
       case 'Road potholes':
@@ -135,6 +136,41 @@ class ReportService {
     }
   }
 
+  // Toggle Upvote Status
+  Future<void> toggleUpvote(String reportId, String userId) async {
+    // Note: IssuesScreen reads from 'reports' collection
+    final DocumentReference reportRef = _firestore
+        .collection('reports')
+        .doc(reportId);
+
+    return _firestore.runTransaction((transaction) async {
+      final DocumentSnapshot snapshot = await transaction.get(reportRef);
+
+      if (!snapshot.exists) {
+        throw Exception("Report does not exist!");
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      List<String> upvotedBy = List<String>.from(data['likedBy'] ?? []);
+      int upvoteCount = data['likesCount'] ?? 0;
+
+      if (upvotedBy.contains(userId)) {
+        // User already upvoted, so remove upvote
+        upvotedBy.remove(userId);
+        upvoteCount = upvoteCount > 0 ? upvoteCount - 1 : 0;
+      } else {
+        // User hasn't upvoted, so add upvote
+        upvotedBy.add(userId);
+        upvoteCount++;
+      }
+
+      transaction.update(reportRef, {
+        'likedBy': upvotedBy,
+        'likesCount': upvoteCount,
+      });
+    });
+  }
+
   // Submit report to Firestore
   // Returns a map containing `reportId` and `verification` result
   Future<Map<String, dynamic>> submitReport({
@@ -143,6 +179,7 @@ class ReportService {
     required String exactLocation,
     required double latitude,
     required double longitude,
+    required String userId,
     File? imageFile,
     bool flaggedSensitive = false,
   }) async {
@@ -219,6 +256,7 @@ class ReportService {
       // Create report data
       final Map<String, dynamic> reportData = {
         'reportId': reportId,
+        'userId': userId,
         'category': category,
         'department': department,
         'description': description,
@@ -226,6 +264,8 @@ class ReportService {
         'latitude': latitude,
         'longitude': longitude,
         'status': 'pending verification',
+        'likesCount': 0, // Initialize upvote count
+        'likedBy': [], // Initialize upvotedBy list
         //'imageUrl': imageUrl ?? '',
         'imageBase64Thumbnail': imageBase64Thumbnail ?? '',
         if (imageEmbedding != null && imageEmbedding.isNotEmpty)

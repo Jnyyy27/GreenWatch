@@ -1,0 +1,460 @@
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class IssueDetailScreen extends StatefulWidget {
+  final Map<String, dynamic> issueData;
+  final String docId;
+
+  const IssueDetailScreen({
+    super.key,
+    required this.issueData,
+    required this.docId,
+  });
+
+  @override
+  State<IssueDetailScreen> createState() => _IssueDetailScreenState();
+}
+
+class _IssueDetailScreenState extends State<IssueDetailScreen> {
+  // Helper method to get status color and icon
+  Map<String, dynamic> _getStatusStyle(String status) {
+    switch (status) {
+      case 'Submitted':
+        return {
+          'color': const Color(0xFF2196F3), // Blue
+          'icon': Icons.upload_file,
+          'label': 'Submitted',
+        };
+      case 'Viewed':
+        return {
+          'color': const Color(0xFFFFC107), // Yellow/Amber
+          'icon': Icons.visibility,
+          'label': 'Viewed',
+        };
+      case 'In Progress':
+        return {
+          'color': const Color(0xFFFF9800), // Orange
+          'icon': Icons.hourglass_empty,
+          'label': 'In Progress',
+        };
+      case 'Resolved':
+        return {
+          'color': const Color(0xFF4CAF50), // Green
+          'icon': Icons.check_circle,
+          'label': 'Resolved',
+        };
+      default:
+        return {
+          'color': Colors.grey,
+          'icon': Icons.help_outline,
+          'label': 'Unknown',
+        };
+    }
+  }
+
+  // Build status chip widget
+  Widget _buildStatusChip(String status) {
+    final style = _getStatusStyle(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: (style['color'] as Color).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: style['color'] as Color, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            style['icon'] as IconData,
+            size: 16,
+            color: style['color'] as Color,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            style['label'] as String,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: style['color'] as Color,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getRelativeTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+
+    if (diff.inSeconds < 60) {
+      return 'just now';
+    } else if (diff.inMinutes < 60) {
+      final mins = diff.inMinutes;
+      return '$mins minute${mins > 1 ? 's' : ''} ago';
+    } else if (diff.inHours < 24) {
+      final hrs = diff.inHours;
+      return '$hrs hour${hrs > 1 ? 's' : ''} ago';
+    } else if (diff.inDays < 30) {
+      final days = diff.inDays;
+      return '$days day${days > 1 ? 's' : ''} ago';
+    } else {
+      final months = (diff.inDays / 30).floor();
+      return '$months month${months > 1 ? 's' : ''} ago';
+    }
+  }
+
+  Future<void> _openGoogleMaps() async {
+    final latitude = widget.issueData['latitude'] as double?;
+    final longitude = widget.issueData['longitude'] as double?;
+
+    if (latitude == null || longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location coordinates not available')),
+      );
+      return;
+    }
+
+    final googleMapsUrl =
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+
+    if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+      await launchUrl(
+        Uri.parse(googleMapsUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open Google Maps')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final category = widget.issueData['category'] as String? ?? '';
+    final description = widget.issueData['description'] as String? ?? '';
+    final location = widget.issueData['exactLocation'] as String? ?? '';
+    final department = widget.issueData['department'] as String? ?? '';
+    final status = widget.issueData['status'] as String? ?? 'Unknown';
+    final latitude = widget.issueData['latitude'] as double?;
+    final longitude = widget.issueData['longitude'] as double?;
+    final timestamp = widget.issueData['createdAt'];
+    final imageBase64 =
+        widget.issueData['imageBase64Thumbnail'] as String? ?? '';
+
+    DateTime? dateTime;
+    if (timestamp is Timestamp) dateTime = timestamp.toDate();
+
+    // Decode image
+    Widget imageWidget;
+    if (imageBase64.isNotEmpty) {
+      try {
+        final bytes = base64Decode(imageBase64);
+        imageWidget = Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+        );
+      } catch (_) {
+        imageWidget = Container(
+          width: double.infinity,
+          height: 300,
+          color: Colors.grey.shade200,
+          child: Icon(
+            Icons.broken_image,
+            size: 64,
+            color: Colors.grey.shade500,
+          ),
+        );
+      }
+    } else {
+      imageWidget = Container(
+        width: double.infinity,
+        height: 300,
+        color: Colors.grey.shade200,
+        child: Icon(Icons.image, size: 64, color: Colors.grey.shade500),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Issue Details'),
+        backgroundColor: const Color.fromARGB(255, 96, 156, 101),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Full-width image
+            Container(
+              width: double.infinity,
+              height: 300,
+              color: Colors.grey.shade200,
+              child: imageWidget,
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status chip at the top
+                  Row(children: [_buildStatusChip(status)]),
+                  const SizedBox(height: 16),
+                  // Category and Department
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.business,
+                              size: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              department,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Description
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Description',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Location
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Location',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              location,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Latitude: $latitude, Longitude: $longitude',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Map Preview
+                  if (latitude != null && longitude != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Map',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: _openGoogleMaps,
+                          child: Container(
+                            width: double.infinity,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Stack(
+                              children: [
+                                GoogleMap(
+                                  initialCameraPosition: CameraPosition(
+                                    target: LatLng(latitude, longitude),
+                                    zoom: 15,
+                                  ),
+                                  onMapCreated: (controller) {
+                                    // Map created
+                                  },
+                                  markers: {
+                                    Marker(
+                                      markerId: const MarkerId(
+                                        'issue_location',
+                                      ),
+                                      position: LatLng(latitude, longitude),
+                                      infoWindow: InfoWindow(title: location),
+                                    ),
+                                  },
+                                  zoomControlsEnabled: false,
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(8),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.open_in_new,
+                                          size: 16,
+                                          color: Color.fromARGB(
+                                            255,
+                                            96,
+                                            156,
+                                            101,
+                                          ),
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Open in Maps',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color.fromARGB(
+                                              255,
+                                              96,
+                                              156,
+                                              101,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 20),
+                  // Timestamp
+                  if (dateTime != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Reported',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${dateTime.toString().split('.')[0]} (${_getRelativeTime(dateTime)})',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

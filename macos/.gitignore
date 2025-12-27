@@ -5,3 +5,7 @@
 # Xcode-related
 **/dgph
 **/xcuserdata/
+
+# Ignore Flutter generated plugin registrant files
+macos/Flutter/GeneratedPluginRegistrant.swift
+
