@@ -78,6 +78,8 @@ class _MyHomePageState extends State<MyHomePage> {
         return 'assets/markers/Road signs.png';
       case 'Faded road markings':
         return 'assets/markers/Faded road markings.png';
+      case 'Fallen trees':
+        return 'assets/markers/Fallen Trees.png';
       case 'Traffic lights':
         return 'assets/markers/Traffic lights.png';
       case 'Streetlights':
@@ -144,6 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
       'Road potholes',
       'Road signs',
       'Faded road markings',
+      'Fallen trees',
       'Traffic lights',
       'Streetlights',
       'Public facilities',

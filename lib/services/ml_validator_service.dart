@@ -116,6 +116,9 @@ class MLValidatorService {
       "log",
       "wood",
       "plant",
+      "fall",
+      "road",
+      "sidewalk",
     ],
 
     // 6. Traffic lights (junction signal problems)
