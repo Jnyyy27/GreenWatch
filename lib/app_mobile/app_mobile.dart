@@ -78,6 +78,8 @@ class _MyHomePageState extends State<MyHomePage> {
         return 'assets/markers/Road signs.png';
       case 'Faded road markings':
         return 'assets/markers/Faded road markings.png';
+      case 'Fallen trees':
+        return 'assets/markers/Fallen Trees.png';
       case 'Traffic lights':
         return 'assets/markers/Traffic lights.png';
       case 'Streetlights':
@@ -128,7 +130,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _setupReportsListener() {
     _reportsSubscription = FirebaseFirestore.instance
         .collection('reports')
-        .where('status', isEqualTo: 'submitted')
+        .where('status', whereIn: ['Submitted', 'Viewed', 'In Progress'])
         .snapshots()
         .listen((snapshot) {
           if (mounted) {
@@ -144,6 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
       'Road potholes',
       'Road signs',
       'Faded road markings',
+      'Fallen trees',
       'Traffic lights',
       'Streetlights',
       'Public facilities',
@@ -159,6 +162,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void dispose() {
     _reportsSubscription?.cancel();
     _mapController?.dispose();
+    _mapController = null;
     super.dispose();
   }
 
@@ -215,11 +219,13 @@ class _MyHomePageState extends State<MyHomePage> {
       });
 
       // Move camera to current location
-      _mapController?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: _currentLocation!, zoom: 15.0),
-        ),
-      );
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: _currentLocation!, zoom: 15.0),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -257,7 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
         final category = data['category'] as String? ?? '';
         final description = data['description'] as String? ?? '';
         final location = data['exactLocation'] as String? ?? '';
-        final status = (data['status'] as String? ?? '').toLowerCase();
+        final status = (data['status'] as String? ?? '');
 
         // Skip resolved reports so they don't appear on the map
         if (status == 'Resolved') {
@@ -378,7 +384,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // --------------------
       // Tab 2: Report Screen
       // --------------------
-      const ReportScreen(),
+      const ReportScreenWithMLValidation(),
 
       // ---------------------
       // Tab 3: Announcement Screen
