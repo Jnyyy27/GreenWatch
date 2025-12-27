@@ -51,6 +51,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
     'Road potholes',
     'Road signs',
     'Faded road markings',
+    'Fallen trees',
     'Traffic lights',
     'Streetlights',
     'Public facilities',
