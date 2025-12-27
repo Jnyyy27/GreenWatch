@@ -410,7 +410,7 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.report), label: 'Report'),
           BottomNavigationBarItem(
             icon: Icon(Icons.announcement),
-            label: 'Announcement',
+            label: 'Info Hub',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

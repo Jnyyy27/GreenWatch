@@ -52,7 +52,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
-          'Announcements',
+          'Info Hub',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: const Color.fromARGB(255, 96, 156, 101),
