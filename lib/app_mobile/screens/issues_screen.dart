@@ -33,8 +33,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
     _pageController = PageController(initialPage: widget.startResolved ? 1 : 0);
   }
 
-  String get _engagementAction =>
-      _showResolvedIssues ? 'like' : 'upvote';
+  String get _engagementAction => _showResolvedIssues ? 'like' : 'upvote';
 
   String get _sortButtonLabel =>
       _showResolvedIssues ? 'Most Liked' : 'Most Upvoted';
@@ -57,6 +56,75 @@ class _IssuesScreenState extends State<IssuesScreen> {
     'Streetlights',
     'Public facilities',
   ];
+
+  // Helper method to get status color and icon
+  Map<String, dynamic> _getStatusStyle(String status) {
+    switch (status) {
+      case 'Submitted':
+        return {
+          'color': const Color(0xFF2196F3), // Blue
+          'icon': Icons.upload_file,
+          'label': 'Submitted',
+        };
+      case 'Viewed':
+        return {
+          'color': const Color(0xFFFFC107), // Yellow/Amber
+          'icon': Icons.visibility,
+          'label': 'Viewed',
+        };
+      case 'In Progress':
+        return {
+          'color': const Color(0xFFFF9800), // Orange
+          'icon': Icons.hourglass_empty,
+          'label': 'In Progress',
+        };
+      case 'Resolved':
+        return {
+          'color': const Color(0xFF4CAF50), // Green
+          'icon': Icons.check_circle,
+          'label': 'Resolved',
+        };
+      default:
+        return {
+          'color': Colors.grey,
+          'icon': Icons.help_outline,
+          'label': 'Unknown',
+        };
+    }
+  }
+
+  // Build status chip widget
+  Widget _buildStatusChip(String status) {
+    final style = _getStatusStyle(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: (style['color'] as Color).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: style['color'] as Color, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            style['icon'] as IconData,
+            size: 14,
+            color: style['color'] as Color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            style['label'] as String,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: style['color'] as Color,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -105,7 +173,9 @@ class _IssuesScreenState extends State<IssuesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Unable to update $_engagementAction. Please try again.'),
+            content: Text(
+              'Unable to update $_engagementAction. Please try again.',
+            ),
           ),
         );
       }
@@ -140,11 +210,11 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   bool _matchesFilters(Map<String, dynamic> data) {
-    final status = (data['status'] as String? ?? '').toLowerCase();
+    final status = (data['status'] as String? ?? '');
     if (_showResolvedIssues) {
-      if (status != 'resolved') return false;
+      if (status != 'Resolved') return false;
     } else {
-      if (status == 'resolved') return false;
+      if (status == 'Resolved') return false;
     }
 
     if (_selectedCategory != null) {
@@ -562,8 +632,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         _selectedCategory = null;
                       });
                     },
-                    backgroundColor: const Color.fromARGB(255, 96, 156, 101)
-                        .withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      96,
+                      156,
+                      101,
+                    ).withOpacity(0.1),
                     labelStyle: const TextStyle(
                       color: Color.fromARGB(255, 96, 156, 101),
                       fontWeight: FontWeight.w600,
@@ -581,8 +655,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         _areaSearchQuery = '';
                       });
                     },
-                    backgroundColor: const Color.fromARGB(255, 96, 156, 101)
-                        .withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      96,
+                      156,
+                      101,
+                    ).withOpacity(0.1),
                     labelStyle: const TextStyle(
                       color: Color.fromARGB(255, 96, 156, 101),
                       fontWeight: FontWeight.w600,
@@ -599,8 +677,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         _sortByMostUpvoted = false;
                       });
                     },
-                    backgroundColor: const Color.fromARGB(255, 96, 156, 101)
-                        .withOpacity(0.1),
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      96,
+                      156,
+                      101,
+                    ).withOpacity(0.1),
                     labelStyle: const TextStyle(
                       color: Color.fromARGB(255, 96, 156, 101),
                       fontWeight: FontWeight.w600,
@@ -616,12 +698,21 @@ class _IssuesScreenState extends State<IssuesScreen> {
   }
 
   Widget _buildIssuesList(bool isResolved) {
+    CollectionReference<Map<String, dynamic>> collection = FirebaseFirestore
+        .instance
+        .collection('reports');
+    Query<Map<String, dynamic>> query;
+    if (isResolved) {
+      query = collection.where('status', isEqualTo: 'Resolved');
+    } else {
+      query = collection.where(
+        'status',
+        whereIn: ['Submitted', 'Viewed', 'In Progress'],
+      );
+    }
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('reports')
-          .where('status', isEqualTo: isResolved ? 'resolved' : 'submitted')
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+      stream: query.orderBy('createdAt', descending: true).snapshots(),
+
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -676,9 +767,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isResolved
-                        ? Icons.check_circle_outline
-                        : Icons.inbox,
+                    isResolved ? Icons.check_circle_outline : Icons.inbox,
                     size: 64,
                     color: Colors.grey.shade400,
                   ),
@@ -699,10 +788,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         ? 'Once reports are resolved they will appear here.'
                         : 'Report an issue to get started.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -734,10 +820,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Try adjusting your filters',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -764,6 +847,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
             final category = data['category'] as String? ?? '';
             final description = data['description'] as String? ?? '';
             final location = data['exactLocation'] as String? ?? '';
+            final status = data['status'] as String? ?? 'Unknown';
             final timestamp = data['createdAt'];
             DateTime? dateTime;
             if (timestamp is Timestamp) dateTime = timestamp.toDate();
@@ -790,10 +874,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    Icons.broken_image,
-                    color: Colors.grey.shade500,
-                  ),
+                  child: Icon(Icons.broken_image, color: Colors.grey.shade500),
                 );
               }
             } else {
@@ -804,10 +885,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  Icons.image,
-                  color: Colors.grey.shade500,
-                ),
+                child: Icon(Icons.image, color: Colors.grey.shade500),
               );
             }
 
@@ -818,8 +896,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
               ),
               child: InkWell(
                 onTap: () {
-                  final status = (data['status'] as String? ?? '').toLowerCase();
-                  if (status == 'resolved') {
+                  if (status == 'Resolved') {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -833,143 +910,160 @@ class _IssuesScreenState extends State<IssuesScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => IssueDetailScreen(
-                          issueData: data,
-                          docId: docId,
-                        ),
+                        builder: (context) =>
+                            IssueDetailScreen(issueData: data, docId: docId),
                       ),
                     );
                   }
                 },
                 borderRadius: BorderRadius.circular(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Stack(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: 8.0,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 180,
-                        child: leading,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.location_on,
-                                size: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
+                              // Add padding to the right to avoid overlap with status chip
+                              Padding(
+                                padding: const EdgeInsets.only(right: 100),
                                 child: Text(
-                                  location,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade700,
+                                  category,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          if (dateTime != null)
-                            Text(
-                              _getRelativeTime(dateTime),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: Row(
-                        children: [
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: upvoteLoading
-                                  ? null
-                                  : () => _toggleUpvote(docId),
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isUpvoted
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      size: 22,
-                                      color: isUpvoted
-                                          ? const Color.fromARGB(255, 220, 95, 95)
-                                          : Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _engagementCountLabel(upvoteCount),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: 8.0,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 180,
+                            child: leading,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      location,
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Colors.grey.shade700,
-                                        fontWeight: FontWeight.w600,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              if (dateTime != null)
+                                Text(
+                                  _getRelativeTime(dateTime),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                            ],
                           ),
-                          const Spacer(),
-                          if (upvoteLoading)
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.grey.shade400,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          child: Row(
+                            children: [
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(20),
+                                  onTap: upvoteLoading
+                                      ? null
+                                      : () => _toggleUpvote(docId),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isUpvoted
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          size: 22,
+                                          color: isUpvoted
+                                              ? const Color.fromARGB(
+                                                  255,
+                                                  220,
+                                                  95,
+                                                  95,
+                                                )
+                                              : Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _engagementCountLabel(upvoteCount),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey.shade700,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
+                              const Spacer(),
+                              if (upvoteLoading)
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.grey.shade400,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Status chip positioned at top right
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: _buildStatusChip(status),
                     ),
                   ],
                 ),
@@ -1006,7 +1100,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
               onPageChanged: _onPageChanged,
               children: [
                 _buildIssuesList(false), // Active Issues
-                _buildIssuesList(true),  // Resolved Issues
+                _buildIssuesList(true), // Resolved Issues
               ],
             ),
           ),

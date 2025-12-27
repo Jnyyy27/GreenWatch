@@ -33,6 +33,7 @@ class _ReportScreenState extends State<ReportScreen> {
     'Road potholes',
     'Road signs',
     'Faded road markings',
+    'Fallen trees',
     'Traffic lights',
     'Streetlights',
     'Public facilities',

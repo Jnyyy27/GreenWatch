@@ -60,6 +60,7 @@ class ReportService {
       case 'Public facilities':
       case 'Road signs':
       case 'Faded road markings':
+      case 'Fallen trees':
       case 'Traffic lights':
         return 'MBPP';
       case 'Streetlights':

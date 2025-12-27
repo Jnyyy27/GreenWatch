@@ -20,6 +20,75 @@ class IssueDetailScreen extends StatefulWidget {
 }
 
 class _IssueDetailScreenState extends State<IssueDetailScreen> {
+  // Helper method to get status color and icon
+  Map<String, dynamic> _getStatusStyle(String status) {
+    switch (status) {
+      case 'Submitted':
+        return {
+          'color': const Color(0xFF2196F3), // Blue
+          'icon': Icons.upload_file,
+          'label': 'Submitted',
+        };
+      case 'Viewed':
+        return {
+          'color': const Color(0xFFFFC107), // Yellow/Amber
+          'icon': Icons.visibility,
+          'label': 'Viewed',
+        };
+      case 'In Progress':
+        return {
+          'color': const Color(0xFFFF9800), // Orange
+          'icon': Icons.hourglass_empty,
+          'label': 'In Progress',
+        };
+      case 'Resolved':
+        return {
+          'color': const Color(0xFF4CAF50), // Green
+          'icon': Icons.check_circle,
+          'label': 'Resolved',
+        };
+      default:
+        return {
+          'color': Colors.grey,
+          'icon': Icons.help_outline,
+          'label': 'Unknown',
+        };
+    }
+  }
+
+  // Build status chip widget
+  Widget _buildStatusChip(String status) {
+    final style = _getStatusStyle(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: (style['color'] as Color).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: style['color'] as Color, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            style['icon'] as IconData,
+            size: 16,
+            color: style['color'] as Color,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            style['label'] as String,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: style['color'] as Color,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _getRelativeTime(DateTime dateTime) {
     final now = DateTime.now();
     final diff = now.difference(dateTime);
@@ -75,6 +144,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final description = widget.issueData['description'] as String? ?? '';
     final location = widget.issueData['exactLocation'] as String? ?? '';
     final department = widget.issueData['department'] as String? ?? '';
+    final status = widget.issueData['status'] as String? ?? 'Unknown';
     final latitude = widget.issueData['latitude'] as double?;
     final longitude = widget.issueData['longitude'] as double?;
     final timestamp = widget.issueData['createdAt'];
@@ -141,27 +211,49 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Category and Status
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Status chip at the top
+                  Row(children: [_buildStatusChip(status)]),
+                  const SizedBox(height: 16),
+                  // Category and Department
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Text(
+                        category,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              category,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
+                            Icon(
+                              Icons.business,
+                              size: 14,
+                              color: Colors.grey.shade600,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(width: 6),
                             Text(
-                              'Department: $department',
+                              department,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
@@ -169,7 +261,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   // Description
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

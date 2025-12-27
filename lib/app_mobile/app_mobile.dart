@@ -128,7 +128,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _setupReportsListener() {
     _reportsSubscription = FirebaseFirestore.instance
         .collection('reports')
-        .where('status', isEqualTo: 'submitted')
+        .where('status', whereIn: ['Submitted', 'Viewed', 'In Progress'])
         .snapshots()
         .listen((snapshot) {
           if (mounted) {
@@ -257,7 +257,7 @@ class _MyHomePageState extends State<MyHomePage> {
         final category = data['category'] as String? ?? '';
         final description = data['description'] as String? ?? '';
         final location = data['exactLocation'] as String? ?? '';
-        final status = (data['status'] as String? ?? '').toLowerCase();
+        final status = (data['status'] as String? ?? '');
 
         // Skip resolved reports so they don't appear on the map
         if (status == 'Resolved') {
