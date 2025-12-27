@@ -55,63 +55,107 @@ class MLValidatorService {
   /// True when model and labels were successfully loaded and interpreter is ready
   bool _modelsLoaded = false;
 
-  // Environmental issue related ImageNet classes
+  // Environmental & infrastructure issue related ImageNet-style keywords
   static const Map<String, List<String>> ISSUE_KEYWORDS = {
-    // 1. Public equipment problem (benches, barriers, cabinets, etc.)
-    "Public equipment problem": [
-      "bench",
-      "park bench",
-      "seesaw",
-      "swing",
-      "slide",
-      "barrier",
-      "bollard",
-      "mailbox",
-      "vending machine",
-      "telephone booth",
-      "parking meter",
-    ],
 
-    // 2. Damage/missing road signs
-    "Damage/missing road signs": [
-      "street sign",
-      "traffic sign",
-      "stop sign",
-      "parking sign",
-      "direction sign",
-      "sign",
-      "road sign",
-      "signboard",
-      "metal pole",
-      "pole",
-    ],
-
-    // 3. Faded road markings
-    "Faded road markings": ["street", "road", "highway", "lane", "crosswalk"],
-
-    // 4. Traffic light problem
-    "Traffic light problem": ["traffic light", "street sign", "pole"],
-
-    // 5. Streetlights problem
-    "Streetlights problem": [
-      "street lamp",
-      "lampshade",
-      "lantern",
-      "pole",
-      "street sign",
-    ],
-
-    // 6. Damage roads
-    "Damage roads": ["street", "road", "sidewalk", "asphalt", "curb", "lane"],
-
-    // 7. Road potholes
-    "Road potholes": [
-      "street",
+    // 1. Damage roads (cracks, broken surface, uneven road)
+    "Damage roads": [
       "road",
+      "street",
       "asphalt",
-      "trench",
       "pavement",
       "sidewalk",
+      "curb",
+      "lane",
+      "crack",
+      "broken road",
+      "damaged road",
+    ],
+
+    // 2. Road potholes (specific road surface holes)
+    "Road potholes": [
+      "pothole",
+      "hole",
+      "asphalt",
+      "road",
+      "street",
+      "pavement",
+      "trench",
+    ],
+
+    // 3. Road signs (missing, damaged, unclear signs)
+    "Road signs": [
+      "road sign",
+      "traffic sign",
+      "street sign",
+      "stop sign",
+      "warning sign",
+      "direction sign",
+      "signboard",
+      "sign",
+      "metal pole",
+    ],
+
+    // 4. Faded road markings (lines, symbols on roads)
+    "Faded road markings": [
+      "road",
+      "street",
+      "lane",
+      "crosswalk",
+      "zebra crossing",
+      "road marking",
+      "line",
+      "paint",
+    ],
+
+    // 5. Fallen trees (blocking roads, sidewalks, facilities)
+    "Fallen trees": [
+      "tree",
+      "fallen tree",
+      "branch",
+      "log",
+      "wood",
+      "plant",
+    ],
+
+    // 6. Traffic lights (junction signal problems)
+    "Traffic lights": [
+      "traffic light",
+      "traffic signal",
+      "signal light",
+      "intersection",
+      "pole",
+    ],
+
+    // 7. Streetlights (lamp posts, lighting issues)
+    "Streetlights": [
+      "street light",
+      "streetlight",
+      "lamp post",
+      "street lamp",
+      "lamp",
+      "lantern",
+      "light pole",
+    ],
+
+    // 8. Public facilities (general public assets)
+    "Public facilities": [
+      "bench",
+      "park bench",
+      "bus stop",
+      "bus shelter",
+      "public toilet",
+      "toilet",
+      "playground",
+      "slide",
+      "swing",
+      "seesaw",
+      "barrier",
+      "bollard",
+      "fence",
+      "vending machine",
+      "mailbox",
+      "parking meter",
     ],
   };
 
