@@ -38,7 +38,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
   String get _engagementAction => _showResolvedIssues ? 'like' : 'upvote';
 
   String get _sortChipLabel =>
-      _showResolvedIssues ? 'Most liked' : 'Most upvoted';
+      _showResolvedIssues ? 'Most upvoted' : 'Most upvoted';
 
   String _engagementCountLabel(int count) {
     final singular = _showResolvedIssues ? 'like' : 'up';
