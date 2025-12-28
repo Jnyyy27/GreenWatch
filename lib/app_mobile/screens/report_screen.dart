@@ -803,7 +803,7 @@ class _ReportScreenWithMLValidationState
             latitude: _latitude!,
             longitude: _longitude!,
             imageFile: _selectedImage,
-        userId: user.uid,
+            userId: user.uid,
             flaggedSensitive: flaggedSensitive,
           );
 
@@ -829,8 +829,8 @@ class _ReportScreenWithMLValidationState
           builder: (ctx) => AlertDialog(
             title: Text(
               vStatus == 'Submitted'
-                  ? 'Report Submitted'
-                  : 'Verification Result',
+                  ? 'Report Submitted Successfully'
+                  : 'Verification Unsuccessful',
             ),
             content: Text(
               vReason.isNotEmpty
@@ -848,46 +848,6 @@ class _ReportScreenWithMLValidationState
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 12),
-                    Text(
-                      'Report Submitted Successfully!',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text('Report ID: $reportId'),
-                if (validationResult.isValid)
-                  Text(
-                    'Detected: ${validationResult.topPrediction?.label ?? 'Unknown'}',
-                  ),
-                Text(
-                  'status: ${verification != null ? verification['status'] : 'pending verification'}',
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-
         _formKey.currentState?.reset();
         _descriptionController.clear();
         _locationController.clear();
