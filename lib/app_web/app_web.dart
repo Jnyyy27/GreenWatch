@@ -10,7 +10,7 @@ class MyWebApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Admin Dashboard',
+      title: 'Green Watch',
       theme: ThemeData(primarySwatch: Colors.green),
       home: const LoginPage(),
     );
