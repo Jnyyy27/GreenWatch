@@ -90,6 +90,11 @@ class DashboardPage extends StatelessWidget {
 
           final newReports24h = reports
               .where((r) => now.difference(r.createdAt).inHours <= 24)
+              .where(
+                (r) =>
+                    r.status.toLowerCase() != 'unsuccessful' &&
+                    r.status.toLowerCase() != 'resolved',
+              )
               .toList();
 
           final unviewedReports = reports

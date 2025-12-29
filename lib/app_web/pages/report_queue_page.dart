@@ -26,7 +26,7 @@ class _ReportQueuePageState extends State<ReportQueuePage> {
   final Map<String, List<String>> _departmentCategories = {
     'MBPP': [
       'Public facilities',
-      'Roads signs',
+      'Road signs',
       'Faded road markings',
       'Traffic lights',
       'Fallen trees',

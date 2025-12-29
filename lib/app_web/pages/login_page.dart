@@ -68,23 +68,14 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Icon(
-                          Icons.account_balance,
-                          size: 48,
-                          color: Colors.green.shade700,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Department Login',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade800,
-                            letterSpacing: -0.5,
+                        Center(
+                          child: Image.asset(
+                            'assets/images/greenwatch.png',
+                            height: 150,
+                            fit: BoxFit.contain,
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 15),
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           decoration: InputDecoration(

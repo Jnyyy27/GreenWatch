@@ -28,9 +28,10 @@ class _HistoryPageState extends State<HistoryPage> {
   final Map<String, List<String>> _departmentCategories = {
     'MBPP': [
       'Public facilities',
-      'Roads signs',
+      'Road signs',
       'Faded road markings',
       'Traffic lights',
+      'Fallen trees',
     ],
     'TNB': ['Streetlights'],
     'JKR': ['Damage roads', 'Road potholes'],
