@@ -126,7 +126,7 @@ class ReportService {
       final int base64Size = ((jpg.length + 2) ~/ 3) * 4;
       if (base64Size > maxBase64Bytes) {
         throw Exception(
-          'Compressed image too large for Firestore (base64 ${base64Size} bytes)',
+          'Compressed image too large for Firestore (base64 $base64Size bytes)',
         );
       }
 
@@ -236,7 +236,7 @@ class ReportService {
 
           imageEmbedding = await mlValidator.getImageEmbedding(imageFile.path);
 
-          if (imageEmbedding != null && imageEmbedding.isNotEmpty) {
+          if (imageEmbedding.isNotEmpty) {
             print(
               '✅ Image embedding extracted (length=${imageEmbedding.length})',
             );

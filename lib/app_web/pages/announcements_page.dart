@@ -450,7 +450,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                               border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: DropdownButtonFormField<String>(
-                              value: _tempCategory,
+                              initialValue: _tempCategory,
                               decoration: const InputDecoration(
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -488,7 +488,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                               border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: DropdownButtonFormField<String>(
-                              value: _tempDateOrder,
+                              initialValue: _tempDateOrder,
                               decoration: const InputDecoration(
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -1783,7 +1783,7 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
                     const SizedBox(height: 8),
 
                     DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),

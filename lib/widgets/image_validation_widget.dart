@@ -8,11 +8,11 @@ class ImageValidationWidget extends StatefulWidget {
   final Function(String)? onValidationError;
 
   const ImageValidationWidget({
-    Key? key,
+    super.key,
     required this.imagePath,
     this.onValidationSuccess,
     this.onValidationError,
-  }) : super(key: key);
+  });
 
   @override
   State<ImageValidationWidget> createState() => _ImageValidationWidgetState();
@@ -199,7 +199,7 @@ class _ImageValidationWidgetState extends State<ImageValidationWidget> {
               ],
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -218,11 +218,11 @@ class DuplicateCheckWidget extends StatefulWidget {
   final Function(bool isDuplicate, double similarity)? onDuplicateCheckComplete;
 
   const DuplicateCheckWidget({
-    Key? key,
+    super.key,
     required this.newImagePath,
     required this.previousImagePaths,
     this.onDuplicateCheckComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<DuplicateCheckWidget> createState() => _DuplicateCheckWidgetState();

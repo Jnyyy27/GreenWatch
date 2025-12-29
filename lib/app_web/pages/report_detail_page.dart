@@ -20,7 +20,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
   late String _currentFirestoreStatus;
   late String _selectedStatus;
   List<TimelineEntry> _timeline = [];
-  List<String> _resolutionProofs = [];
+  final List<String> _resolutionProofs = [];
   final TextEditingController _commentController = TextEditingController();
 
   final List<String> _statusOptions = [
@@ -60,8 +60,9 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
       widget.report.status,
     ); // initialize
     _selectedStatus = _normalizeStatus(widget.report.status);
-    if (!_statusOptions.contains(_selectedStatus))
+    if (!_statusOptions.contains(_selectedStatus)) {
       _selectedStatus = 'Submitted';
+    }
     _loadLatestStatus();
     _loadTimeline();
   }
@@ -993,7 +994,7 @@ class _ReportDetailModalState extends State<ReportDetailModal> {
                   ),
                 ),
 
-                value: _getAllowedStatuses().contains(_selectedStatus)
+                initialValue: _getAllowedStatuses().contains(_selectedStatus)
                     ? _selectedStatus
                     : _getAllowedStatuses().first,
                 items: _getAllowedStatuses().map((s) {

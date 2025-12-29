@@ -55,7 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
   GoogleMapController? _mapController;
   LatLng? _currentLocation;
   int _selectedIndex = 0;
-  Map<String, BitmapDescriptor> _markerIcons = {};
+  final Map<String, BitmapDescriptor> _markerIcons = {};
   Set<Marker> _issueMarkers = {};
   Set<String> _loadedDocumentIds =
       {}; // Track loaded documents to avoid unnecessary updates

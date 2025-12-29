@@ -408,7 +408,7 @@ class _ResolvedIssueDetailScreenState extends State<ResolvedIssueDetailScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${_resolvedEntry!.timestamp.toString().split('.')[0]}',
+                            _resolvedEntry!.timestamp.toString().split('.')[0],
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color.fromARGB(255, 96, 156, 101),

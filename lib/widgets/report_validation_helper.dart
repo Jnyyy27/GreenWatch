@@ -21,8 +21,7 @@ class ReportValidationHelper {
 class ImageValidationDialog extends StatefulWidget {
   final String imagePath;
 
-  const ImageValidationDialog({Key? key, required this.imagePath})
-    : super(key: key);
+  const ImageValidationDialog({super.key, required this.imagePath});
 
   @override
   State<ImageValidationDialog> createState() => _ImageValidationDialogState();

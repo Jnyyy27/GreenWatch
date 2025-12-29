@@ -223,13 +223,16 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     if (p == null) return '';
     final parts = <String>[];
     if (p.street != null && p.street!.isNotEmpty) parts.add(p.street!);
-    if (p.subLocality != null && p.subLocality!.isNotEmpty)
+    if (p.subLocality != null && p.subLocality!.isNotEmpty) {
       parts.add(p.subLocality!);
+    }
     if (p.locality != null && p.locality!.isNotEmpty) parts.add(p.locality!);
-    if (p.postalCode != null && p.postalCode!.isNotEmpty)
+    if (p.postalCode != null && p.postalCode!.isNotEmpty) {
       parts.add(p.postalCode!);
-    if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty)
+    }
+    if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty) {
       parts.add(p.administrativeArea!);
+    }
     return parts.isNotEmpty ? parts.join(', ') : '';
   }
 

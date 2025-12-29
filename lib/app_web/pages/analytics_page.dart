@@ -183,8 +183,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       // Filter by date range
       final createdAt = report.createdAt;
       if (createdAt.isBefore(dateRange.start) ||
-          createdAt.isAfter(dateRange.end))
+          createdAt.isAfter(dateRange.end)) {
         continue;
+      }
 
       // Exclude unsuccessful reports from all chart counts
       if (report.status.toLowerCase() == 'unsuccessful') continue;

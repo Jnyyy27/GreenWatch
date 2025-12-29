@@ -968,7 +968,7 @@ class _ReportScreenWithMLValidationState
                         ],
                       ),
                       child: DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         decoration: InputDecoration(
                           hintText: 'Select issue category',
                           hintStyle: TextStyle(color: Colors.grey.shade400),

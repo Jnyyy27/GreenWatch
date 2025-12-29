@@ -206,25 +206,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: kBackgroundGray,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 1. Enhanced Header with User Info
-            _buildHeader(context, user),
-
-            // 2. Stats Dashboard (Overlapping)
-            Transform.translate(
-              offset: const Offset(0, -40),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildStatsSection(user),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    kBackgroundGray,
+                    kBackgroundGray.withOpacity(0.9),
+                    kPrimaryLight.withOpacity(0.08),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
+          ),
+          Positioned(
+            top: -120,
+            right: -80,
+            child: _buildGlowBlob(
+              size: 220,
+              color: kPrimaryGreen.withOpacity(0.18),
+            ),
+          ),
+          Positioned(
+            bottom: -140,
+            left: -100,
+            child: _buildGlowBlob(
+              size: 240,
+              color: kPrimaryLight.withOpacity(0.2),
+            ),
+          ),
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // 1. Enhanced Header with User Info
+                _buildHeader(context, user),
 
-            // 3. Menu Options
-            _buildMenuItems(context),
-          ],
-        ),
+                // 2. Stats Dashboard (Overlapping)
+                Transform.translate(
+                  offset: const Offset(0, -48),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildStatsSection(user),
+                  ),
+                ),
+
+                // 3. Menu Options
+                _buildMenuItems(context),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -232,299 +267,343 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // --- Widget Builders ---
 
   Widget _buildHeader(BuildContext context, User? user) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [kPrimaryGreen, kPrimaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: kPrimaryGreen.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+    return ClipPath(
+      clipper: _HeaderClipper(),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kPrimaryGreen, kPrimaryDark],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Decorative circles
-            Positioned(
-              top: -30,
-              right: -30,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
+          boxShadow: [
+            BoxShadow(
+              color: kPrimaryGreen.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              // Decorative circles
+              Positioned(
+                top: -30,
+                right: -30,
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: -40,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.08),
+              Positioned(
+                bottom: 10,
+                left: -40,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.08),
+                  ),
                 ),
               ),
-            ),
-            
-            // Main content
-            Column(
-              children: [
-                // Top bar with title and notification
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Profile',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          icon: Stack(
-                            children: [
-                              const Icon(Icons.notifications_outlined, 
-                                color: Colors.white, 
-                                size: 24,
+              Positioned(
+                top: 90,
+                right: 12,
+                child: Icon(
+                  Icons.spa_outlined,
+                  color: Colors.white.withOpacity(0.15),
+                  size: 80,
+                ),
+              ),
+
+              // Main content
+              Column(
+                children: [
+                  // Top bar with title and notification
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
                               ),
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1.5,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Your eco journey',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Stack(
+                              children: [
+                                const Icon(
+                                  Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 1.5,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            tooltip: 'Notifications',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NotificationScreen(),
+                                ),
+                              );
+                            },
                           ),
-                          tooltip: 'Notifications',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => NotificationScreen(),
-                              ),
-                            );
-                          },
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                
-                // User Avatar and Info
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
-                  child: StreamBuilder<DocumentSnapshot>(
-                    stream: user == null
-                        ? null
-                        : FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(user.uid)
-                            .snapshots(),
-                    builder: (context, snapshot) {
-                      final displayEmail = user?.email ?? "";
-                      String fetchedName = user?.displayName ?? "User";
-                      String? fetchedPhotoBase64;
-                      if (snapshot.hasData && snapshot.data!.exists) {
-                        final data = snapshot.data!.data() as Map<String, dynamic>;
-                        fetchedName = (data['name'] as String?)?.trim().isNotEmpty == true
-                            ? data['name']
-                            : "User";
-                        fetchedPhotoBase64 = (data['photoBase64'] as String?)?.trim();
-                      }
 
-                      String resolvedName = fetchedName;
-                      if (user != null &&
-                          snapshot.connectionState == ConnectionState.waiting) {
-                        resolvedName = "Loading...";
-                      }
-
-                      Uint8List? fetchedAvatarBytes;
-                      if (fetchedPhotoBase64 != null &&
-                          fetchedPhotoBase64.isNotEmpty) {
-                        try {
-                          fetchedAvatarBytes = base64Decode(fetchedPhotoBase64);
-                        } catch (_) {
-                          fetchedAvatarBytes = null;
+                  // User Avatar and Info
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 80),
+                    child: StreamBuilder<DocumentSnapshot>(
+                      stream: user == null
+                          ? null
+                          : FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(user.uid)
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        final displayEmail = user?.email ?? "";
+                        String fetchedName = user?.displayName ?? "User";
+                        String? fetchedPhotoBase64;
+                        if (snapshot.hasData && snapshot.data!.exists) {
+                          final data = snapshot.data!.data() as Map<String, dynamic>;
+                          fetchedName = (data['name'] as String?)?.trim().isNotEmpty == true
+                              ? data['name']
+                              : "User";
+                          fetchedPhotoBase64 = (data['photoBase64'] as String?)?.trim();
                         }
-                      }
 
-                      final avatarProvider = _pendingAvatarBytes != null
-                          ? MemoryImage(_pendingAvatarBytes!)
-                          : fetchedAvatarBytes != null
-                              ? MemoryImage(fetchedAvatarBytes)
-                              : const AssetImage('assets/images/greenwatch.png')
-                                  as ImageProvider;
+                        String resolvedName = fetchedName;
+                        if (user != null &&
+                            snapshot.connectionState == ConnectionState.waiting) {
+                          resolvedName = "Loading...";
+                        }
 
-                      return Column(
-                        children: [
-                          SizedBox(
-                            width: 116,
-                            height: 116,
-                            child: Stack(
-                              children: [
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.white,
-                                          Colors.white.withOpacity(0.8),
-                                        ],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 10),
-                                        ),
-                                      ],
-                                    ),
+                        Uint8List? fetchedAvatarBytes;
+                        if (fetchedPhotoBase64 != null &&
+                            fetchedPhotoBase64.isNotEmpty) {
+                          try {
+                            fetchedAvatarBytes = base64Decode(fetchedPhotoBase64);
+                          } catch (_) {
+                            fetchedAvatarBytes = null;
+                          }
+                        }
+
+                        final avatarProvider = _pendingAvatarBytes != null
+                            ? MemoryImage(_pendingAvatarBytes!)
+                            : fetchedAvatarBytes != null
+                                ? MemoryImage(fetchedAvatarBytes)
+                                : const AssetImage('assets/images/greenwatch.png')
+                                    as ImageProvider;
+
+                        return Column(
+                          children: [
+                            SizedBox(
+                              width: 120,
+                              height: 120,
+                              child: Stack(
+                                children: [
+                                  Align(
+                                    alignment: Alignment.center,
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: kCardWhite,
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.white,
+                                            Colors.white.withOpacity(0.8),
+                                          ],
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 10),
+                                          ),
+                                        ],
                                       ),
-                                      child: CircleAvatar(
-                                        radius: 50,
-                                        backgroundColor: kBackgroundGray,
-                                        backgroundImage: avatarProvider,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 4,
-                                  right: 4,
-                                  child: Material(
-                                    color: kPrimaryGreen,
-                                    shape: const CircleBorder(),
-                                    elevation: 4,
-                                  child: InkWell(
-                                      customBorder: const CircleBorder(),
-                                      onTap: user == null || _uploadingPhoto
-                                          ? null
-                                          : () => _showPhotoOptions(
-                                                context,
-                                                photoBase64: fetchedPhotoBase64,
-                                                localBytes: _pendingAvatarBytes,
-                                              ),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: Icon(
-                                          Icons.edit,
-                                          color: Colors.white,
-                                          size: 18,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: kCardWhite,
+                                        ),
+                                        child: CircleAvatar(
+                                          radius: 52,
+                                          backgroundColor: kBackgroundGray,
+                                          backgroundImage: avatarProvider,
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  resolvedName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.5,
+                                  Positioned(
+                                    bottom: 6,
+                                    right: 6,
+                                    child: Material(
+                                      color: kPrimaryGreen,
+                                      shape: const CircleBorder(),
+                                      elevation: 4,
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: user == null || _uploadingPhoto
+                                            ? null
+                                            : () => _showPhotoOptions(
+                                                  context,
+                                                  photoBase64: fetchedPhotoBase64,
+                                                  localBytes: _pendingAvatarBytes,
+                                                ),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(8),
+                                          child: Icon(
+                                            Icons.edit,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
+                                ],
                               ),
-                              if (user != null) ...[
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                                  tooltip: 'Edit name',
-                                  onPressed: () => _promptEditName(resolvedName),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.email_outlined,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
-                                    displayEmail,
+                                    resolvedName,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.5,
                                     ),
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
+                                if (user != null) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                                    tooltip: 'Edit name',
+                                    onPressed: () => _promptEditName(resolvedName),
+                                  ),
+                                ],
                               ],
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.email_outlined,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      displayEmail,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlowBlob({required double size, required Color color}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color,
+            color.withOpacity(0.0),
           ],
         ),
       ),
@@ -538,15 +617,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required bool isLoading,
   }) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: kCardWhite,
+        gradient: LinearGradient(
+          colors: [
+            kPrimaryLight.withOpacity(0.18),
+            kPrimaryGreen.withOpacity(0.12),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        color: Colors.white.withOpacity(0.35),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kBorderColor, width: 1),
+        border: Border.all(
+          color: kPrimaryLight.withOpacity(0.22),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 30,
+            color: kPrimaryGreen.withOpacity(0.12),
+            blurRadius: 18,
             offset: const Offset(0, 10),
           ),
         ],
@@ -555,10 +645,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.bar_chart_rounded,
-                color: kPrimaryGreen,
-                size: 20,
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.bar_chart_rounded,
+                  color: kPrimaryDark,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
@@ -567,7 +664,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: kTextPrimary,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.2,
                 ),
               ),
             ],
@@ -1034,4 +1131,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+}
+
+class _HeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height - 70);
+    path.quadraticBezierTo(
+      size.width * 0.25,
+      size.height - 30,
+      size.width * 0.55,
+      size.height - 50,
+    );
+    path.quadraticBezierTo(
+      size.width * 0.85,
+      size.height - 70,
+      size.width,
+      size.height - 30,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
