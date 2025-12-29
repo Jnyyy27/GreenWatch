@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 import 'my_reports_screen.dart';
 import 'notification_screen.dart';
@@ -31,9 +30,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
 
-  String? _localName;
-  Uint8List? _localAvatarBytes;
-  bool _loadingLocal = true;
+  Uint8List? _pendingAvatarBytes;
+  bool _uploadingPhoto = false;
 
   Color get kPrimaryGreen => ProfileScreen.kPrimaryGreen;
   Color get kPrimaryLight => ProfileScreen.kPrimaryLight;
@@ -48,45 +46,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadLocalProfile();
   }
 
-  Future<void> _loadLocalProfile() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        _loadingLocal = false;
-      });
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    final savedName = prefs.getString('profile_name_${user.uid}');
-    final savedPhoto = prefs.getString('profile_photo_${user.uid}');
-    Uint8List? photoBytes;
-    if (savedPhoto != null) {
-      try {
-        photoBytes = base64Decode(savedPhoto);
-      } catch (_) {
-        photoBytes = null;
-      }
-    }
-
-    setState(() {
-      _localName = savedName;
-      _localAvatarBytes = photoBytes;
-      _loadingLocal = false;
-    });
-  }
-
-  Future<void> _updateLocalName(String name) async {
+  Future<void> _updateProfileName(String name) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_name_${user.uid}', name);
-    setState(() {
-      _localName = name;
-    });
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'name': name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> _pickNewPhoto() async {
@@ -99,15 +67,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bytes = await picked.readAsBytes();
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_photo_${user.uid}', base64Encode(bytes));
-
     setState(() {
-      _localAvatarBytes = bytes;
+      _pendingAvatarBytes = bytes;
+      _uploadingPhoto = true;
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'photoBase64': base64Encode(bytes),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save photo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pendingAvatarBytes = null;
+          _uploadingPhoto = false;
+        });
+      }
+    }
   }
 
-  void _showPhotoOptions(BuildContext context) {
+  void _showPhotoOptions(
+    BuildContext context, {
+    required String? photoBase64,
+    required Uint8List? localBytes,
+  }) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -121,12 +111,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 leading: const Icon(Icons.visibility_outlined),
                 title: const Text('View photo'),
-                enabled: _localAvatarBytes != null,
-                onTap: _localAvatarBytes == null
+                enabled: localBytes != null || (photoBase64?.isNotEmpty ?? false),
+                onTap: localBytes == null && (photoBase64?.isNotEmpty != true)
                     ? null
                     : () {
                         Navigator.pop(ctx);
-                        _viewCurrentPhoto();
+                        _viewCurrentPhoto(
+                          photoBase64: photoBase64,
+                          localBytes: localBytes,
+                        );
                       },
               ),
               ListTile(
@@ -144,8 +137,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _viewCurrentPhoto() {
-    if (_localAvatarBytes == null) return;
+  void _viewCurrentPhoto({
+    required String? photoBase64,
+    required Uint8List? localBytes,
+  }) {
+    if (localBytes == null && (photoBase64?.isNotEmpty != true)) return;
+    Uint8List? decodedBytes = localBytes;
+    if (decodedBytes == null && photoBase64 != null) {
+      try {
+        decodedBytes = base64Decode(photoBase64);
+      } catch (_) {
+        decodedBytes = null;
+      }
+    }
+    if (decodedBytes == null) return;
     showDialog(
       context: context,
       builder: (ctx) {
@@ -154,10 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: InteractiveViewer(
-              child: Image.memory(
-                _localAvatarBytes!,
-                fit: BoxFit.cover,
-              ),
+              child: Image.memory(decodedBytes!, fit: BoxFit.cover),
             ),
           ),
         );
@@ -194,7 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (newName != null && newName.isNotEmpty) {
-      await _updateLocalName(newName);
+      await _updateProfileName(newName);
     }
   }
 
@@ -342,33 +344,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // User Avatar and Info
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
-                  child: FutureBuilder<DocumentSnapshot>(
-                    future: user == null
+                  child: StreamBuilder<DocumentSnapshot>(
+                    stream: user == null
                         ? null
                         : FirebaseFirestore.instance
                             .collection('users')
                             .doc(user.uid)
-                            .get(),
+                            .snapshots(),
                     builder: (context, snapshot) {
                       final displayEmail = user?.email ?? "";
-                      String fetchedName = "User";
+                      String fetchedName = user?.displayName ?? "User";
+                      String? fetchedPhotoBase64;
                       if (snapshot.hasData && snapshot.data!.exists) {
                         final data = snapshot.data!.data() as Map<String, dynamic>;
                         fetchedName = (data['name'] as String?)?.trim().isNotEmpty == true
                             ? data['name']
                             : "User";
+                        fetchedPhotoBase64 = (data['photoBase64'] as String?)?.trim();
                       }
 
-                      String resolvedName = _localName ?? fetchedName;
-                      if (_localName == null &&
-                          user != null &&
+                      String resolvedName = fetchedName;
+                      if (user != null &&
                           snapshot.connectionState == ConnectionState.waiting) {
                         resolvedName = "Loading...";
                       }
 
-                      final avatarProvider = _localAvatarBytes != null
-                          ? MemoryImage(_localAvatarBytes!)
-                          : const AssetImage('assets/images/greenwatch.png') as ImageProvider;
+                      Uint8List? fetchedAvatarBytes;
+                      if (fetchedPhotoBase64 != null &&
+                          fetchedPhotoBase64.isNotEmpty) {
+                        try {
+                          fetchedAvatarBytes = base64Decode(fetchedPhotoBase64);
+                        } catch (_) {
+                          fetchedAvatarBytes = null;
+                        }
+                      }
+
+                      final avatarProvider = _pendingAvatarBytes != null
+                          ? MemoryImage(_pendingAvatarBytes!)
+                          : fetchedAvatarBytes != null
+                              ? MemoryImage(fetchedAvatarBytes)
+                              : const AssetImage('assets/images/greenwatch.png')
+                                  as ImageProvider;
 
                       return Column(
                         children: [
@@ -418,11 +434,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: kPrimaryGreen,
                                     shape: const CircleBorder(),
                                     elevation: 4,
-                                    child: InkWell(
+                                  child: InkWell(
                                       customBorder: const CircleBorder(),
-                                      onTap: user == null
+                                      onTap: user == null || _uploadingPhoto
                                           ? null
-                                          : () => _showPhotoOptions(context),
+                                          : () => _showPhotoOptions(
+                                                context,
+                                                photoBase64: fetchedPhotoBase64,
+                                                localBytes: _pendingAvatarBytes,
+                                              ),
                                       child: const Padding(
                                         padding: EdgeInsets.all(8),
                                         child: Icon(

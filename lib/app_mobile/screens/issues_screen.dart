@@ -22,10 +22,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
   String? _selectedCategory;
   String _areaSearchQuery = '';
   final TextEditingController _areaSearchController = TextEditingController();
+  final FocusNode _areaSearchFocusNode = FocusNode();
   final ReportService _reportService = ReportService();
   final Set<String> _upvoteInProgress = {};
   bool _showResolvedIssues = false;
   bool _sortByMostUpvoted = false;
+  bool _searchExpanded = false;
   late final PageController _pageController;
 
   @override
@@ -33,6 +35,12 @@ class _IssuesScreenState extends State<IssuesScreen> {
     super.initState();
     _showResolvedIssues = widget.startResolved;
     _pageController = PageController(initialPage: widget.startResolved ? 1 : 0);
+    _areaSearchFocusNode.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _searchExpanded = _areaSearchFocusNode.hasFocus;
+      });
+    });
   }
 
   String get _engagementAction => _showResolvedIssues ? 'like' : 'upvote';
@@ -129,6 +137,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
   @override
   void dispose() {
     _areaSearchController.dispose();
+    _areaSearchFocusNode.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -424,113 +433,123 @@ class _IssuesScreenState extends State<IssuesScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                Material(
-                  color: _selectedCategory != null
-                      ? const Color.fromARGB(255, 96, 156, 101)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  child: InkWell(
-                    onTap: () => _showCategoryFilterMenu(context),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _selectedCategory != null
-                              ? const Color.fromARGB(255, 96, 156, 101)
-                              : Colors.grey.shade300,
-                        ),
+                if (!_searchExpanded) ...[
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Material(
+                      color: _selectedCategory != null
+                          ? const Color.fromARGB(255, 96, 156, 101)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        onTap: () => _showCategoryFilterMenu(context),
                         borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.filter_list,
-                            size: 20,
-                            color: _selectedCategory != null
-                                ? Colors.white
-                                : Colors.grey.shade700,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _selectedCategory ?? 'Category',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            border: Border.all(
                               color: _selectedCategory != null
-                                  ? Colors.white
-                                  : Colors.grey.shade700,
+                                  ? const Color.fromARGB(255, 96, 156, 101)
+                                  : Colors.grey.shade300,
                             ),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_drop_down,
-                            size: 20,
-                            color: _selectedCategory != null
-                                ? Colors.white
-                                : Colors.grey.shade700,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.filter_list,
+                                size: 20,
+                                color: _selectedCategory != null
+                                    ? Colors.white
+                                    : Colors.grey.shade700,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  _selectedCategory ?? 'Category',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: _selectedCategory != null
+                                        ? Colors.white
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                size: 20,
+                                color: _selectedCategory != null
+                                    ? Colors.white
+                                    : Colors.grey.shade700,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Material(
-                  color: _sortByMostUpvoted
-                      ? const Color.fromARGB(255, 96, 156, 101)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  child: PopupMenuButton<_SortOption>(
-                    tooltip: 'Sort',
-                    onSelected: (value) {
-                      setState(() {
-                        _sortByMostUpvoted = value == _SortOption.mostUpvoted;
-                      });
-                    },
-                    itemBuilder: (context) => [
-                      CheckedPopupMenuItem(
-                        value: _SortOption.mostUpvoted,
-                        checked: _sortByMostUpvoted,
-                        child: Text(_sortChipLabel),
-                      ),
-                      CheckedPopupMenuItem(
-                        value: _SortOption.newest,
-                        checked: !_sortByMostUpvoted,
-                        child: const Text('Newest'),
-                      ),
-                    ],
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _sortByMostUpvoted
-                              ? const Color.fromARGB(255, 96, 156, 101)
-                              : Colors.grey.shade300,
                         ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.filter_alt,
-                        size: 20,
-                        color: _sortByMostUpvoted
-                            ? Colors.white
-                            : Colors.grey.shade700,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: _sortByMostUpvoted
+                        ? const Color.fromARGB(255, 96, 156, 101)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    child: PopupMenuButton<_SortOption>(
+                      tooltip: 'Sort',
+                      onSelected: (value) {
+                        setState(() {
+                          _sortByMostUpvoted = value == _SortOption.mostUpvoted;
+                        });
+                      },
+                      itemBuilder: (context) => [
+                        CheckedPopupMenuItem(
+                          value: _SortOption.mostUpvoted,
+                          checked: _sortByMostUpvoted,
+                          child: Text(_sortChipLabel),
+                        ),
+                        CheckedPopupMenuItem(
+                          value: _SortOption.newest,
+                          checked: !_sortByMostUpvoted,
+                          child: const Text('Newest'),
+                        ),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _sortByMostUpvoted
+                                ? const Color.fromARGB(255, 96, 156, 101)
+                                : Colors.grey.shade300,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.filter_alt,
+                          size: 20,
+                          color: _sortByMostUpvoted
+                              ? Colors.white
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(
                   child: TextField(
                     controller: _areaSearchController,
+                    focusNode: _areaSearchFocusNode,
                     decoration: InputDecoration(
                       hintText: 'Search by area',
                       hintStyle: TextStyle(
@@ -554,6 +573,8 @@ class _IssuesScreenState extends State<IssuesScreen> {
                               },
                             )
                           : null,
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 40, minHeight: 40),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       border: OutlineInputBorder(
@@ -603,6 +624,15 @@ class _IssuesScreenState extends State<IssuesScreen> {
                         });
                       },
                     ),
+                  ),
+                if (_searchExpanded)
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close search',
+                    color: Colors.grey.shade700,
+                    onPressed: () {
+                      _areaSearchFocusNode.unfocus();
+                    },
                   ),
               ],
             ),
